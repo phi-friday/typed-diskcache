@@ -39,10 +39,10 @@ I'll be adding more tests over time.
 
 ## TODO
 - [ ] docstring
+> There are still some, but most of them copied `python-diskcache`.
 - [ ] docs
 - [ ] tests
 - [ ] performance
-> There are still some, but most of them copied `python-diskcache`.
 
 ## License
 
