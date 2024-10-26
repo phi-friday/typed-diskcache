@@ -1,0 +1,85 @@
+[project]
+name = "typed-diskcache"
+dynamic = ["version"]
+description = "Disk and file backed persistent cache."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "phi", email = "phi.friday@gmail.com" } 
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Framework :: AsyncIO",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "anyio>=4",
+    "cloudpickle>=3.1.0",
+    "pydantic>=2",
+    "sqlalchemy-utils",
+    "sqlalchemy>=2.0.13",
+    "typing-extensions>=4.10.0",
+    "tomli; python_version < '3.11'",
+    "eval-type-backport; python_version < '3.10'"
+]
+[project.optional-dependencies]
+asyncio = [
+    "aiosqlite",
+    "sqlalchemy[asyncio]>=2",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=8.3.3",
+    "pytest-cov>=5.0.0",
+    "pytest-env>=1.1.5",
+    "pytest-xdist>=3.6.1",
+    "uvloop>=0.21.0",
+]
+dev = [
+    { include-group = "test"},
+    "ruff==0.7.1",
+    "ipykernel>=6.29.5",
+    "pre-commit>=4.0.1",
+    "poethepoet>=0.29.0",
+    "typed-diskcache[asyncio]"
+]
+
+[tool.uv]
+managed = true
+default-groups = ["dev"]
+
+[tool.poe.tasks]
+lint = ["_lint:check", "_lint:format"]
+"_lint:check" = "ruff check src --fix"
+"_lint:format" = "ruff format src"
+check = "pre-commit run --all-files --show-diff-on-failure"
+
+[project.urls]
+Source = "https://github.com/phi-friday/typed-diskcache"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/typed_diskcache"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/typed_diskcache", "src/licenses"]
+
+[tool.pytest.ini_options]
+addopts = "-n 4 --cov=src/async_wrapper --cov-report html --cov-report=xml"
+testpaths = ["src/tests"]

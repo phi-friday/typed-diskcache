@@ -1,0 +1,31 @@
+{
+    "include": [
+        "src/typed_diskcache",
+        "src/tests",
+    ],
+    "extraPaths": [
+        "src"
+    ],
+    "typeCheckingMode": "strict",
+    "pythonVersion": "3.9",
+    "pythonPlatform": "Linux",
+    "reportMissingTypeStubs": false,
+    "reportInconsistentConstructor": false,
+    "reportUnknownArgumentType": false,
+    "reportOverlappingOverload": false,
+    "reportUnknownVariableType": false,
+    "reportUnknownMemberType": false,
+    "reportUnnecessaryIsInstance": false,
+    "reportUnnecessaryComparison": false,
+    "reportDeprecated": false,
+    "reportPrivateUsage": false,
+    "reportUnnecessaryTypeIgnoreComment": true,
+    "reportImplicitOverride": true,
+    "executionEnvironments": [
+        {
+            "root": "src/tests",
+            "reportUnknownParameterType": false,
+            "reportMissingParameterType": false,
+        }
+    ]
+}
