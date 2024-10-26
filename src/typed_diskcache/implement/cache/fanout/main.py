@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 from sqlalchemy.exc import OperationalError
 from typing_extensions import TypeVar, override
 
+from typed_diskcache import exception as te
 from typed_diskcache.core.types import (
     Container,
     FilterMethod,
@@ -605,7 +606,7 @@ class FanoutCache(CacheProtocol):
         tags: str | Iterable[str] | None = None,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     async def apush(
@@ -618,7 +619,7 @@ class FanoutCache(CacheProtocol):
         tags: str | Iterable[str] | None = None,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     def pull(
@@ -629,7 +630,7 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.FRONT,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     async def apull(
@@ -640,7 +641,7 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.FRONT,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     def peek(
@@ -651,7 +652,7 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.BACK,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     async def apeek(
@@ -662,12 +663,12 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.BACK,
         retry: bool = False,
     ) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     def peekitem(self, *, last: bool = True, retry: bool = False) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
 
     @override
     async def apeekitem(self, *, last: bool = True, retry: bool = False) -> NoReturn:
-        raise NotImplementedError
+        raise te.TypedDiskcacheNotImplementedError
