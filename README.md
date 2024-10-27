@@ -1,6 +1,7 @@
 # typed-diskcache
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Documentation Status](https://readthedocs.org/projects/typed-diskcache/badge/?version=latest)](https://typed-diskcache.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/typed-diskcache.svg)](https://badge.fury.io/py/typed-diskcache)
 [![python version](https://img.shields.io/pypi/pyversions/typed-diskcache.svg)](#)
 

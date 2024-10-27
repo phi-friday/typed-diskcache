@@ -79,6 +79,7 @@ check = "pre-commit run --all-files --show-diff-on-failure"
 
 [project.urls]
 Source = "https://github.com/phi-friday/typed-diskcache"
+Documentation = "https://typed-diskcache.readthedocs.io/"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
