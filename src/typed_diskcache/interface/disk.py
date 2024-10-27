@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from os import PathLike
     from pathlib import Path
 
     from typed_diskcache.core.types import CacheMode
-    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["DiskProtocol"]
@@ -22,7 +22,7 @@ class DiskProtocol(Protocol):
         kwargs: additional keyword arguments
     """
 
-    def __init__(self, directory: StrPath, **kwargs: Any) -> None: ...
+    def __init__(self, directory: str | PathLike[str], **kwargs: Any) -> None: ...
     def __getstate__(self) -> Mapping[str, Any]: ...
     def __setstate__(self, state: Mapping[str, Any]) -> None: ...
 
@@ -32,7 +32,7 @@ class DiskProtocol(Protocol):
         ...
 
     @directory.setter
-    def directory(self, value: StrPath) -> None: ...
+    def directory(self, value: str | PathLike[str]) -> None: ...
 
     def hash(self, key: Any) -> int:
         """Compute portable hash for `key`.
@@ -112,7 +112,9 @@ class DiskProtocol(Protocol):
         """
         ...
 
-    def fetch(self, *, mode: CacheMode, filename: StrPath | None, value: Any) -> Any:
+    def fetch(
+        self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
+    ) -> Any:
         """Convert fields `mode`, `filename`, and `value` from Cache table to value.
 
         Args:
@@ -126,7 +128,7 @@ class DiskProtocol(Protocol):
         ...
 
     async def afetch(
-        self, *, mode: CacheMode, filename: StrPath | None, value: Any
+        self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
         """Convert fields `mode`, `filename`, and `value` from Cache table to value.
 
@@ -142,7 +144,7 @@ class DiskProtocol(Protocol):
         """
         ...
 
-    def remove(self, file_path: StrPath) -> None:
+    def remove(self, file_path: str | PathLike[str]) -> None:
         """Remove a file given by `file_path`.
 
         This method is cross-thread and cross-process safe.
@@ -153,7 +155,7 @@ class DiskProtocol(Protocol):
         """
         ...
 
-    async def aremove(self, file_path: StrPath) -> None:
+    async def aremove(self, file_path: str | PathLike[str]) -> None:
         """Remove a file given by `file_path`.
 
         This method is cross-thread and cross-process safe.

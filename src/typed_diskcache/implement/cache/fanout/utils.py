@@ -10,6 +10,7 @@ from typed_diskcache.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
+    from os import PathLike
     from pathlib import Path
 
     from typed_diskcache.database import Connection
@@ -17,14 +18,15 @@ if TYPE_CHECKING:
     from typed_diskcache.interface.cache import CacheProtocol
     from typed_diskcache.interface.disk import DiskProtocol
     from typed_diskcache.model import Settings
-    from typed_diskcache.utils.typing import StrPath
 
 __all__ = []
 
 _P = ParamSpec("_P")
 _C = TypeVar("_C", bound="CacheProtocol")
-CleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], None]"
-AsyncCleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], Awaitable[Any]]"
+CleanupFunc: TypeAlias = "Callable[[Iterable[str | PathLike[str] | None]], None]"
+AsyncCleanupFunc: TypeAlias = (
+    "Callable[[Iterable[str | PathLike[str] | None]], Awaitable[Any]]"
+)
 
 logger = get_logger()
 

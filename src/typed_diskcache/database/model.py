@@ -27,11 +27,12 @@ from typed_diskcache.log import get_logger
 from typed_diskcache.utils.re import camel_to_snake
 
 if TYPE_CHECKING:
+    from os import PathLike
+
     from sqlalchemy.engine import Connection
     from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
     from sqlalchemy.orm import InstrumentedAttribute, Session
 
-    from typed_diskcache.utils.typing import StrPath
 
 __all__ = ["Version", "Metadata", "Settings", "Cache"]
 
@@ -247,7 +248,7 @@ class Cache(Base):
         store_time: float,
         access_time: float,
         value: bytes | None,
-        filepath: StrPath | None,
+        filepath: str | PathLike[str] | None,
         expire_time: float | None = None,
         mode: CacheMode = CacheMode.NONE,
         access_count: int = 0,
@@ -283,7 +284,7 @@ class Cache(Base):
         return self._filepath
 
     @filepath.setter
-    def filepath(self, value: StrPath | None) -> None:  # pyright: ignore[reportRedeclaration]
+    def filepath(self, value: str | PathLike[str] | None) -> None:  # pyright: ignore[reportRedeclaration]
         self._filepath = str(value) if value else None
 
     @filepath.expression

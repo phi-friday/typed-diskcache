@@ -36,9 +36,9 @@ repo_url: str = pyproject_dict["project"]["urls"]["Source"]
 extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
     "sphinx_immaterial",
     "sphinx_immaterial.task_lists",
@@ -88,6 +88,8 @@ html_theme_options = {
         },
     ],
 }
+### sphinx.ext.intersphinx
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 ### sphinx.ext.autodoc
 autodoc_class_signature = "mixed"
 autodoc_member_order = "bysource"
@@ -106,16 +108,16 @@ napoleon_use_admonition_for_notes = True
 napoleon_use_admonition_for_references = True
 napoleon_use_ivar = False
 napoleon_use_param = True
-napoleon_use_rtype = True
+napoleon_use_rtype = False
 napoleon_preprocess_types = True
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 ### autodoc-typehints
 typehints_fully_qualified = False
 always_document_param_types = False
-always_use_bars_union = False
-typehints_document_rtype = True
-typehints_use_rtype = True
+always_use_bars_union = True
+typehints_document_rtype = False
+typehints_use_rtype = False
 typehints_defaults = "braces"
 simplify_optional_unions = True
 typehints_formatter = None

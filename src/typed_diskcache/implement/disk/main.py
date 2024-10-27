@@ -22,8 +22,7 @@ from typed_diskcache.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    from typed_diskcache.utils.typing import StrPath
+    from os import PathLike
 
 
 __all__ = ["Disk"]
@@ -42,7 +41,7 @@ class Disk(DiskProtocol):
 
     def __init__(
         self,
-        directory: StrPath,
+        directory: str | PathLike[str],
         min_file_size: int = DISK_DEFAULT_MIN_SIZE,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -65,7 +64,7 @@ class Disk(DiskProtocol):
 
     @directory.setter
     @override
-    def directory(self, value: StrPath) -> None:
+    def directory(self, value: str | PathLike[str]) -> None:
         self._directory = Path(value).resolve()
 
     @override
@@ -237,7 +236,9 @@ class Disk(DiskProtocol):
 
     @context
     @override
-    def fetch(self, *, mode: CacheMode, filename: StrPath | None, value: Any) -> Any:  # noqa: PLR0911
+    def fetch(  # noqa: PLR0911
+        self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
+    ) -> Any:
         if mode == CacheMode.NONE:
             logger.debug("Fetching null value")
             return None
@@ -269,7 +270,7 @@ class Disk(DiskProtocol):
     @context
     @override
     async def afetch(  # noqa: PLR0911
-        self, *, mode: CacheMode, filename: StrPath | None, value: Any
+        self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
         if mode == CacheMode.NONE:
             logger.debug("Fetching null value")
@@ -307,7 +308,7 @@ class Disk(DiskProtocol):
 
     @context
     @override
-    def remove(self, file_path: StrPath) -> None:
+    def remove(self, file_path: str | PathLike[str]) -> None:
         full_path = self._directory / file_path
         full_dir = full_path.parent
 
@@ -328,7 +329,7 @@ class Disk(DiskProtocol):
 
     @context
     @override
-    async def aremove(self, file_path: StrPath) -> None:
+    async def aremove(self, file_path: str | PathLike[str]) -> None:
         full_path = anyio.Path(self._directory / file_path)
         full_dir = full_path.parent
 

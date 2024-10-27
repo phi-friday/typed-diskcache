@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         Iterator,
         Mapping,
     )
+    from os import PathLike
     from pathlib import Path
 
     from typed_diskcache.core.types import (
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
     )
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
-    from typed_diskcache.utils.typing import StrPath
 
 _AnyT = TypeVar("_AnyT", default=Any)
 
@@ -45,7 +45,7 @@ class CacheProtocol(Protocol):
 
     def __init__(
         self,
-        directory: StrPath | None = ...,
+        directory: str | PathLike[str] | None = ...,
         disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None = ...,
         disk_args: Mapping[str, Any] | None = ...,
         **kwargs: Any,

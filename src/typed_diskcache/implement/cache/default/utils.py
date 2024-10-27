@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         Iterable,
         Mapping,
     )
+    from os import PathLike
 
     from anyio.streams.memory import MemoryObjectSendStream
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,13 +51,14 @@ if TYPE_CHECKING:
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
-    from typed_diskcache.utils.typing import StrPath
 
 __all__ = []
 
 _T = TypeVar("_T", infer_variance=True)
-CleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], None]"
-AsyncCleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], Awaitable[Any]]"
+CleanupFunc: TypeAlias = "Callable[[Iterable[str | PathLike[str] | None]], None]"
+AsyncCleanupFunc: TypeAlias = (
+    "Callable[[Iterable[str | PathLike[str] | None]], Awaitable[Any]]"
+)
 
 logger = get_logger()
 
@@ -151,7 +153,7 @@ def transact_process(
     disk: DiskProtocol,
     *,
     retry: bool = False,
-    filename: StrPath | None = None,
+    filename: str | PathLike[str] | None = None,
 ) -> Session | None:
     try:
         session = stack.enter_context(conn.sync_session)
@@ -173,7 +175,7 @@ async def async_transact_process(
     disk: DiskProtocol,
     *,
     retry: bool = False,
-    filename: StrPath | None = None,
+    filename: str | PathLike[str] | None = None,
 ) -> AsyncSession | None:
     try:
         session = await stack.enter_async_context(conn.async_session)
@@ -429,10 +431,10 @@ def transact(
     conn: Connection,
     disk: DiskProtocol,
     retry: bool = False,
-    filename: StrPath | None = None,
+    filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
 ) -> Generator[tuple[Session, CleanupFunc], None, None]:
-    filenames: list[StrPath | None] = []
+    filenames: list[str | PathLike[str] | None] = []
     with ExitStack() as stack:
         session: Session | None = None
         while session is None:
@@ -464,10 +466,12 @@ async def async_transact(
     conn: Connection,
     disk: DiskProtocol,
     retry: bool = False,
-    filename: StrPath | None = None,
+    filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
 ) -> AsyncGenerator[tuple[AsyncSession, AsyncCleanupFunc], None]:
-    send, receive = anyio.create_memory_object_stream["StrPath | None"](1_000_000)
+    send, receive = anyio.create_memory_object_stream["str | PathLike[str] | None"](
+        1_000_000
+    )
     async with AsyncExitStack() as stack:
         session: AsyncSession | None = None
         while session is None:
@@ -536,7 +540,7 @@ def build_cache_instance(  # noqa: PLR0913
     disk: DiskProtocol,
     value: Any,
     key: Any,
-    filepath: tuple[StrPath | None, StrPath | None] | None,
+    filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
     instance_tags: set[TagTable],
 ) -> CacheTable:
     instance.tags = instance_tags
@@ -559,7 +563,7 @@ async def async_build_cache_instance(  # noqa: PLR0913
     disk: DiskProtocol,
     value: Any,
     key: Any,
-    filepath: tuple[StrPath | None, StrPath | None] | None,
+    filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
     instance_tags: set[TagTable],
 ) -> CacheTable:
     instance.tags = instance_tags
@@ -1017,7 +1021,11 @@ async def acheck_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) 
 
 
 async def acheck_files(
-    *, session: AsyncSession, directory: StrPath, fix: bool, stacklevel: int = 2
+    *,
+    session: AsyncSession,
+    directory: str | PathLike[str],
+    fix: bool,
+    stacklevel: int = 2,
 ) -> None:
     filenames: set[anyio.Path] = set()
     rows_fetch = await session.execute(
@@ -1060,7 +1068,7 @@ async def acheck_file_exists(  # noqa: PLR0913
     *,
     session: AsyncSession,
     row: sa.Row[tuple[int, int, str]],
-    directory: StrPath,
+    directory: str | PathLike[str],
     fix: bool,
     filenames: set[anyio.Path],
     stacklevel: int = 3,
@@ -1093,7 +1101,7 @@ async def acheck_file_exists(  # noqa: PLR0913
 
 async def acheck_unknown_file(
     *,
-    dirpath: StrPath,
+    dirpath: str | PathLike[str],
     fix: bool,
     files: list[str],
     filenames: set[anyio.Path],
@@ -1119,7 +1127,7 @@ async def acheck_empty_dir(
     *,
     dirs: list[str],
     files: list[str],
-    dirpath: StrPath,
+    dirpath: str | PathLike[str],
     fix: bool,
     stacklevel: int = 3,
 ) -> None:
@@ -1198,7 +1206,7 @@ def check_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) -> None
 
 
 def check_files(
-    *, session: Session, directory: StrPath, fix: bool, stacklevel: int = 2
+    *, session: Session, directory: str | PathLike[str], fix: bool, stacklevel: int = 2
 ) -> None:
     filenames: set[Path] = set()
     rows = session.execute(
@@ -1240,7 +1248,7 @@ def check_file_exists(  # noqa: PLR0913
     *,
     session: Session,
     row: sa.Row[tuple[int, int, str]],
-    directory: StrPath,
+    directory: str | PathLike[str],
     fix: bool,
     filenames: set[Path],
     stacklevel: int = 3,
@@ -1273,7 +1281,7 @@ def check_file_exists(  # noqa: PLR0913
 
 def check_unknown_file(
     *,
-    dirpath: StrPath,
+    dirpath: str | PathLike[str],
     fix: bool,
     files: list[str],
     filenames: set[Path],
@@ -1299,7 +1307,7 @@ def check_empty_dir(
     *,
     dirs: list[str],
     files: list[str],
-    dirpath: StrPath,
+    dirpath: str | PathLike[str],
     fix: bool,
     stacklevel: int = 3,
 ) -> None:

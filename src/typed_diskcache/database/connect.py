@@ -30,11 +30,11 @@ from typed_diskcache.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
+    from os import PathLike
 
     from sqlalchemy.engine.interfaces import DBAPIConnection, Dialect
 
     from typed_diskcache.model import SQLiteSettings
-    from typed_diskcache.utils.typing import StrPath
 
 __all__ = [
     "create_sqlite_url",
@@ -63,7 +63,9 @@ class SessionMaker(Protocol[SessionT]):
     __call__: Callable[..., SessionT]
 
 
-def create_sqlite_url(file: StrPath, *, is_async: bool = False, **kwargs: Any) -> URL:
+def create_sqlite_url(
+    file: str | PathLike[str], *, is_async: bool = False, **kwargs: Any
+) -> URL:
     """file to sqlite url"""
     url = URL.create(drivername="sqlite+pysqlite")
     if is_async:

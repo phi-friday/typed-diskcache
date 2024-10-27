@@ -17,9 +17,9 @@ from typed_diskcache.database.session import AsyncSession, Session
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+    from os import PathLike
 
     from typed_diskcache.model import Settings
-    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["Connection"]
@@ -30,7 +30,7 @@ class Connection:
 
     def __init__(
         self,
-        database: StrPath,
+        database: str | PathLike[str],
         timeout: float,
         sync_scopefunc: Callable[[], Any] | None = None,
         async_scopefunc: Callable[[], Any] | None = None,

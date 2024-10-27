@@ -46,20 +46,22 @@ if TYPE_CHECKING:
         Iterator,
         Mapping,
     )
+    from os import PathLike
 
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
-    from typed_diskcache.utils.typing import StrPath
 
 __all__ = ["Cache"]
 
 logger = get_logger()
 _AnyT = TypeVar("_AnyT", default=Any)
-CleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], None]"
-AsyncCleanupFunc: TypeAlias = "Callable[[Iterable[StrPath | None]], Awaitable[Any]]"
+CleanupFunc: TypeAlias = "Callable[[Iterable[str | PathLike[str] | None]], None]"
+AsyncCleanupFunc: TypeAlias = (
+    "Callable[[Iterable[str | PathLike[str] | None]], Awaitable[Any]]"
+)
 
 
 class Cache(CacheProtocol):
@@ -78,7 +80,7 @@ class Cache(CacheProtocol):
 
     def __init__(
         self,
-        directory: StrPath | None = None,
+        directory: str | PathLike[str] | None = None,
         disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None = None,
         disk_args: Mapping[str, Any] | None = None,
         timeout: float = 60,

@@ -9,9 +9,9 @@ from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.interface.disk import DiskProtocol
 
 if TYPE_CHECKING:
-    from sqlalchemy.engine.interfaces import DBAPIConnection
+    from os import PathLike
 
-    from typed_diskcache.utils.typing import StrPath
+    from sqlalchemy.engine.interfaces import DBAPIConnection
 
 
 __all__ = ["Settings"]
@@ -72,7 +72,7 @@ class Settings(BaseModel):
         module = import_module(module_path)
         return getattr(module, cls_name)
 
-    def create_disk(self, directory: StrPath) -> DiskProtocol:
+    def create_disk(self, directory: str | PathLike[str]) -> DiskProtocol:
         """Create disk instance."""
         cls_path, kwargs = self.serialized_disk
 

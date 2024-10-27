@@ -2,17 +2,23 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import anyio
+from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from typed_diskcache.interface.disk import DiskProtocol
-    from typed_diskcache.utils.typing import OpenBinaryModeWriting, OpenTextModeWriting
+
 
 __all__ = []
+
+OpenBinaryModeWriting: TypeAlias = Literal["wb", "bw", "ab", "ba", "xb", "bx"]
+OpenTextModeWriting: TypeAlias = Literal[
+    "w", "wt", "tw", "a", "at", "ta", "x", "xt", "tx"
+]
 
 
 @overload
