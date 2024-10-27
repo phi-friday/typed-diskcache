@@ -3,8 +3,8 @@ Semaphore
 
 .. autoclass:: typed_diskcache::SyncSemaphore
     :members:
-    :inherited-members:
+    :show-inheritance:
 
 .. autoclass:: typed_diskcache::AsyncSemaphore
     :members:
-    :inherited-members:
+    :show-inheritance:

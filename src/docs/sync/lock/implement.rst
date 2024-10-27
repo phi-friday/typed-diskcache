@@ -3,16 +3,16 @@ Lock
 
 .. autoclass:: typed_diskcache::SyncLock
     :members:
-    :inherited-members:
+    :show-inheritance:
 
 .. autoclass:: typed_diskcache::SyncRLock
     :members:
-    :inherited-members:
+    :show-inheritance:
 
 .. autoclass:: typed_diskcache::AsyncLock
     :members:
-    :inherited-members:
+    :show-inheritance:
 
 .. autoclass:: typed_diskcache::AsyncRLock
     :members:
-    :inherited-members:
+    :show-inheritance:

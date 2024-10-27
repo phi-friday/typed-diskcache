@@ -96,7 +96,7 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 autodoc_class_signature = "mixed"
 autodoc_member_order = "bysource"
 autodoc_docstring_signature = True
-autodoc_typehints = "both"
+autodoc_typehints = "signature"
 autodoc_typehints_description_target = "all"
 autodoc_typehints_format = "short"
 ### sphinx.ext.napoleon
