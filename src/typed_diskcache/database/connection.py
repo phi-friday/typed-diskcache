@@ -18,9 +18,8 @@ from typed_diskcache.database.session import AsyncSession, Session
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from _typeshed import StrPath
-
     from typed_diskcache.model import Settings
+    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["Connection"]

@@ -27,10 +27,11 @@ from typed_diskcache.log import get_logger
 from typed_diskcache.utils.re import camel_to_snake
 
 if TYPE_CHECKING:
-    from _typeshed import StrPath
     from sqlalchemy.engine import Connection
     from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
     from sqlalchemy.orm import InstrumentedAttribute, Session
+
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = ["Version", "Metadata", "Settings", "Cache"]
 

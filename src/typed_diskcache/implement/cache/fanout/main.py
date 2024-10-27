@@ -38,10 +38,9 @@ if TYPE_CHECKING:
     )
     from warnings import WarningMessage
 
-    from _typeshed import StrPath
-
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = ["FanoutCache"]
 
@@ -59,7 +58,7 @@ class FanoutCache(CacheProtocol):
         disk_args: keyword arguments for `disk_type`. Default is `None`.
         timeout: connection timeout. Default is 60 seconds.
         shard_size: number of shards. Default is 8.
-        **kwargs: additional keyword arguments
+        kwargs: additional keyword arguments
             for `DiskProtocol`, `CacheProtocol` and `Settings`
     """
 

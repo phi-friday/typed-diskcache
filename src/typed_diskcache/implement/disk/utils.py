@@ -9,9 +9,8 @@ import anyio
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from _typeshed import OpenBinaryModeWriting, OpenTextModeWriting
-
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.utils.typing import OpenBinaryModeWriting, OpenTextModeWriting
 
 __all__ = []
 

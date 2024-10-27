@@ -53,6 +53,13 @@ dev = [
     "poethepoet>=0.29.0",
     "typed-diskcache[asyncio]"
 ]
+docs = [
+    "linkify-it-py>=2.0.3",
+    "myst-parser>=3.0.1",
+    "sphinx-autodoc-typehints>=2.3.0",
+    "sphinx-immaterial>=0.12.4",
+    "sphinx>=7.4.7",
+]
 
 [tool.uv]
 managed = true
@@ -60,9 +67,9 @@ default-groups = ["dev"]
 
 [tool.poe.tasks]
 lint = ["_lint:check", "_lint:format"]
+check = "pre-commit run --all-files --show-diff-on-failure"
 "_lint:check" = "ruff check src --fix"
 "_lint:format" = "ruff format src"
-check = "pre-commit run --all-files --show-diff-on-failure"
 
 [project.urls]
 Source = "https://github.com/phi-friday/typed-diskcache"

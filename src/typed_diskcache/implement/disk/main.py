@@ -23,7 +23,7 @@ from typed_diskcache.log import get_logger
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from _typeshed import StrPath
+    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["Disk"]
@@ -37,7 +37,7 @@ class Disk(DiskProtocol):
     Args:
         directory: directory for cache
         min_file_size: minimum size for file use. Default is 32kb.
-        **kwargs: additional keyword arguments
+        kwargs: additional keyword arguments
     """
 
     def __init__(

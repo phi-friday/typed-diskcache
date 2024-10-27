@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     )
     from pathlib import Path
 
-    from _typeshed import StrPath
-
     from typed_diskcache.core.types import (
         Container,
         FilterMethod,
@@ -28,6 +26,7 @@ if TYPE_CHECKING:
     )
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.utils.typing import StrPath
 
 _AnyT = TypeVar("_AnyT", default=Any)
 
@@ -40,7 +39,7 @@ class CacheProtocol(Protocol):
         directory: directory for cache
         disk_type: `DiskProtocol` class or callable
         disk_args: keyword arguments for `disk_type`
-        **kwargs: additional keyword arguments
+        kwargs: additional keyword arguments
             for `DiskProtocol`, `CacheProtocol` and `Settings`
     """
 
@@ -759,19 +758,6 @@ class CacheProtocol(Protocol):
 
         See also `pull`.
 
-        >>> import typed_diskcache
-        >>> cache = import typed_diskcache.Cache()
-        >>> print(cache.push("first value"))
-        500000000000000
-        >>> cache.get(500000000000000)
-        'first value'
-        >>> print(cache.push("second value"))
-        500000000000001
-        >>> print(cache.push("third value", side="front"))
-        499999999999999
-        >>> cache.push(1234, prefix="userids")
-        'userids-500000000000000'
-
         Args:
             value: value for item
             prefix: key prefix. If None, key is integer
@@ -782,6 +768,25 @@ class CacheProtocol(Protocol):
 
         Returns:
             key for item in cache
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    print(cache.push("first value"))
+                    # 500000000000000
+                    print(cache.get(500000000000000))
+                    # first value
+                    print(cache.push("second value"))
+                    # 500000000000001
+                    print(cache.push("third value", side="front"))
+                    # 499999999999999
+                    print(cache.push(1234, prefix="userids"))
+                    # userids-500000000000000
         """
         ...
 
@@ -806,19 +811,6 @@ class CacheProtocol(Protocol):
 
         See also `pull`.
 
-        >>> import typed_diskcache
-        >>> cache = import typed_diskcache.Cache()
-        >>> print(cache.push("first value"))
-        500000000000000
-        >>> cache.get(500000000000000)
-        'first value'
-        >>> print(cache.push("second value"))
-        500000000000001
-        >>> print(cache.push("third value", side="front"))
-        499999999999999
-        >>> cache.push(1234, prefix="userids")
-        'userids-500000000000000'
-
         Args:
             value: value for item
             prefix: key prefix. If None, key is integer
@@ -829,6 +821,25 @@ class CacheProtocol(Protocol):
 
         Returns:
             key for item in cache
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                async def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    print(await cache.apush("first value"))
+                    # 500000000000000
+                    print(await cache.aget(500000000000000))
+                    # first value
+                    print(await cache.apush("second value"))
+                    # 500000000000001
+                    print(await cache.apush("third value", side="front"))
+                    # 499999999999999
+                    print(await cache.apush(1234, prefix="userids"))
+                    # userids-500000000000000
         """
         ...
 
@@ -887,29 +898,6 @@ class CacheProtocol(Protocol):
 
         See also `push` and `get`.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcacheCache()
-        >>> cache.pull()
-        Container(default=True, expire_time=None, tags=None)
-        >>> for letter in "abc":
-        ...     print(cache.push(letter))
-        500000000000000
-        500000000000001
-        500000000000002
-        >>> container = cache.pull()
-        >>> print(container.key)
-        500000000000000
-        >>> container.value
-        'a'
-        >>> container = cache.pull(side="back")
-        >>> container.value
-        'c'
-        >>> cache.push(1234, prefix="userids")
-        'userids-500000000000000'
-        >>> container = cache.pull(prefix="userids")
-        >>> container.value
-        1234
-
         Args:
             prefix: key prefix. If None, key is integer
             default: value to return if key is missing
@@ -918,6 +906,35 @@ class CacheProtocol(Protocol):
 
         Returns:
             value for item or default if queue is empty
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    print(cache.pull())
+                    # Container(default=True, expire_time=None, tags=None)
+                    for letter in "abc":
+                        print(cache.push(letter))
+                    # 500000000000000
+                    # 500000000000001
+                    # 500000000000002
+                    container = cache.pull()
+                    print(container.key)
+                    # 500000000000000
+                    print(container.value)
+                    # a
+                    container = cache.pull(side="back")
+                    print(container.value)
+                    # c
+                    print(cache.push(1234, prefix="userids"))
+                    # userids-500000000000000
+                    container = cache.pull(prefix="userids")
+                    print(container.value)
+                    # 1234
         """
         ...
 
@@ -978,29 +995,6 @@ class CacheProtocol(Protocol):
 
         See also `push` and `get`.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcacheCache()
-        >>> cache.pull()
-        Container(default=True, expire_time=None, tags=None)
-        >>> for letter in "abc":
-        ...     print(cache.push(letter))
-        500000000000000
-        500000000000001
-        500000000000002
-        >>> container = cache.pull()
-        >>> print(container.key)
-        500000000000000
-        >>> container.value
-        'a'
-        >>> container = cache.pull(side="back")
-        >>> container.value
-        'c'
-        >>> cache.push(1234, prefix="userids")
-        'userids-500000000000000'
-        >>> container = cache.pull(prefix="userids")
-        >>> container.value
-        1234
-
         Args:
             prefix: key prefix. If None, key is integer
             default: value to return if key is missing
@@ -1009,6 +1003,35 @@ class CacheProtocol(Protocol):
 
         Returns:
             value for item or default if queue is empty
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                async def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    print(await cache.apull())
+                    # Container(default=True, expire_time=None, tags=None)
+                    for letter in "abc":
+                        print(await cache.apush(letter))
+                    # 500000000000000
+                    # 500000000000001
+                    # 500000000000002
+                    container = await cache.apull()
+                    print(container.key)
+                    # 500000000000000
+                    print(container.value)
+                    # a
+                    container = await cache.apull(side="back")
+                    print(container.value)
+                    # c
+                    print(await cache.apush(1234, prefix="userids"))
+                    # userids-500000000000000
+                    container = await cache.apull(prefix="userids")
+                    print(container.value)
+                    # 1234
         """
         ...
 
@@ -1068,24 +1091,6 @@ class CacheProtocol(Protocol):
 
         See also `pull` and `push`.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for letter in "abc":
-        ...     print(cache.push(letter))
-        500000000000000
-        500000000000001
-        500000000000002
-        >>> container = cache.peek()
-        >>> print(container.key)
-        500000000000002
-        >>> container.value
-        'c'
-        >>> container = cache.peek(side="front")
-        >>> print(container.key)
-        500000000000000
-        >>> container.value
-        'a'
-
         Args:
             prefix: key prefix. If None, key is integer
             default: value to return if key is missing
@@ -1094,6 +1099,30 @@ class CacheProtocol(Protocol):
 
         Returns:
             value for item or default if queue is empty
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for letter in "abc":
+                        print(cache.push(letter))
+                    # 500000000000000
+                    # 500000000000001
+                    # 500000000000002
+                    container = cache.peek()
+                    print(container.key)
+                    # 500000000000002
+                    print(container.value)
+                    # c
+                    container = cache.peek(side="front")
+                    print(container.key)
+                    # 500000000000000
+                    print(container.value)
+                    # a
         """
         ...
 
@@ -1155,24 +1184,6 @@ class CacheProtocol(Protocol):
 
         See also `pull` and `push`.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for letter in "abc":
-        ...     print(cache.push(letter))
-        500000000000000
-        500000000000001
-        500000000000002
-        >>> container = cache.peek()
-        >>> print(container.key)
-        500000000000002
-        >>> container.value
-        'c'
-        >>> container = cache.peek(side="front")
-        >>> print(container.key)
-        500000000000000
-        >>> container.value
-        'a'
-
         Args:
             prefix: key prefix. If None, key is integer
             default: value to return if key is missing
@@ -1181,6 +1192,30 @@ class CacheProtocol(Protocol):
 
         Returns:
             value for item or default if queue is empty
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                async def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for letter in "abc":
+                        print(await cache.apush(letter))
+                    # 500000000000000
+                    # 500000000000001
+                    # 500000000000002
+                    container = await cache.apeek()
+                    print(container.key)
+                    # 500000000000002
+                    print(container.value)
+                    # c
+                    container = await cache.apeek(side="front")
+                    print(container.key)
+                    # 500000000000000
+                    print(container.value)
+                    # a
         """
         ...
 
@@ -1190,23 +1225,29 @@ class CacheProtocol(Protocol):
         Expired items are deleted from cache. Operation is atomic. Concurrent
         operations will be serialized.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for num, letter in enumerate('abc'):
-        ...     cache[letter] = num
-        >>> container = cache.peekitem()
-        >>> container.key, container.value
-        ('c', 2)
-        >>> container = cache.peekitem(last=False)
-        >>> container.key, container.value
-        ('a', 0)
-
         Args:
             last: last item in iteration order
             retry: retry if database timeout occurs
 
         Returns:
             value for item
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for num, letter in enumerate("abc"):
+                        cache[letter] = num
+                    container = cache.peekitem()
+                    print(container.key, container.value)
+                    # ('c', 2)
+                    container = cache.peekitem(last=False)
+                    print(container.key, container.value)
+                    # ('a', 0)
         """
         ...
 
@@ -1218,23 +1259,29 @@ class CacheProtocol(Protocol):
         Expired items are deleted from cache. Operation is atomic. Concurrent
         operations will be serialized.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for num, letter in enumerate('abc'):
-        ...     cache[letter] = num
-        >>> container = cache.peekitem()
-        >>> container.key, container.value
-        ('c', 2)
-        >>> container = cache.peekitem(last=False)
-        >>> container.key, container.value
-        ('a', 0)
-
         Args:
             last: last item in iteration order
             retry: retry if database timeout occurs
 
         Returns:
             value for item
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                async def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for num, letter in enumerate("abc"):
+                        cache[letter] = num
+                    container = await cache.apeekitem()
+                    print(container.key, container.value)
+                    # ('c', 2)
+                    container = await cache.apeekitem(last=False)
+                    print(container.key, container.value)
+                    # ('a', 0)
         """
         ...
 
@@ -1288,20 +1335,26 @@ class CacheProtocol(Protocol):
     def iterkeys(self, *, reverse: bool = ...) -> Generator[Any, None, None]:
         """Iterate Cache keys in database sort order.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for key in [4, 1, 3, 0, 2]:
-        ...     cache[key] = key
-        >>> list(cache.iterkeys())
-        [0, 1, 2, 3, 4]
-        >>> list(cache.iterkeys(reverse=True))
-        [4, 3, 2, 1, 0]
-
         Args:
             reverse: reverse sort order
 
         Yields:
             key of item
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for key in [4, 1, 3, 0, 2]:
+                        cache[key] = key
+                    print(list(cache.iterkeys()))
+                    # [0, 1, 2, 3, 4]
+                    print(list(cache.iterkeys(reverse=True)))
+                    # [4, 3, 2, 1, 0]
         """
         ...
 
@@ -1310,19 +1363,25 @@ class CacheProtocol(Protocol):
 
         Asynchronous version of `iterkeys`.
 
-        >>> import typed_diskcache
-        >>> cache = typed_diskcache.Cache()
-        >>> for key in [4, 1, 3, 0, 2]:
-        ...     cache[key] = key
-        >>> list(cache.iterkeys())
-        [0, 1, 2, 3, 4]
-        >>> list(cache.iterkeys(reverse=True))
-        [4, 3, 2, 1, 0]
-
         Args:
             reverse: reverse sort order
 
         Yields:
             key of item
+
+        Examples:
+            .. code-block:: python
+
+                import typed_diskcache
+
+
+                async def main() -> None:
+                    cache = typed_diskcache.Cache()
+                    for key in [4, 1, 3, 0, 2]:
+                        cache[key] = key
+                    print([x async for x in cache.aiterkeys()])
+                    # [0, 1, 2, 3, 4]
+                    print([x async for x in cache.aiterkeys(reverse=True)])
+                    # [4, 3, 2, 1, 0]
         """
         ...

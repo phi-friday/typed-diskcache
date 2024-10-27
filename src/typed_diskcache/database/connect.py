@@ -31,10 +31,10 @@ from typed_diskcache.log import get_logger
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
-    from _typeshed import StrPath
     from sqlalchemy.engine.interfaces import DBAPIConnection, Dialect
 
     from typed_diskcache.model import SQLiteSettings
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = [
     "create_sqlite_url",

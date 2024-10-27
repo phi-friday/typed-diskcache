@@ -6,9 +6,8 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-    from _typeshed import StrPath
-
     from typed_diskcache.core.types import CacheMode
+    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["DiskProtocol"]
@@ -20,7 +19,7 @@ class DiskProtocol(Protocol):
 
     Args:
         directory: directory for cache
-        **kwargs: additional keyword arguments
+        kwargs: additional keyword arguments
     """
 
     def __init__(self, directory: StrPath, **kwargs: Any) -> None: ...

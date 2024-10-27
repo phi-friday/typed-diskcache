@@ -9,8 +9,9 @@ from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.interface.disk import DiskProtocol
 
 if TYPE_CHECKING:
-    from _typeshed import StrPath
     from sqlalchemy.engine.interfaces import DBAPIConnection
+
+    from typed_diskcache.utils.typing import StrPath
 
 
 __all__ = ["Settings"]

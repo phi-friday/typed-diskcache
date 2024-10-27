@@ -44,13 +44,13 @@ if TYPE_CHECKING:
         Mapping,
     )
 
-    from _typeshed import StrPath
     from anyio.streams.memory import MemoryObjectSendStream
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = []
 

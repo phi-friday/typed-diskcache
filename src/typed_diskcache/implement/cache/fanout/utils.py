@@ -12,13 +12,12 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
     from pathlib import Path
 
-    from _typeshed import StrPath
-
     from typed_diskcache.database import Connection
     from typed_diskcache.implement.cache.default import Cache
     from typed_diskcache.interface.cache import CacheProtocol
     from typed_diskcache.interface.disk import DiskProtocol
     from typed_diskcache.model import Settings
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = []
 

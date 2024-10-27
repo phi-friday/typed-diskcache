@@ -47,12 +47,12 @@ if TYPE_CHECKING:
         Mapping,
     )
 
-    from _typeshed import StrPath
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.utils.typing import StrPath
 
 __all__ = ["Cache"]
 
@@ -70,7 +70,7 @@ class Cache(CacheProtocol):
         disk_type: `DiskProtocol` class or callable. Default is `None`.
         disk_args: keyword arguments for `disk_type`. Default is `None`.
         timeout: connection timeout. Default is 60 seconds.
-        **kwargs: additional keyword arguments
+        kwargs: additional keyword arguments
             for `DiskProtocol`, `CacheProtocol` and `Settings`
     """
 

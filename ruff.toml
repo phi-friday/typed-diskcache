@@ -94,6 +94,7 @@ ignore = [
 
 [lint.per-file-ignores]
 "src/typed_diskcache/database/revision/*.py" = ["N999"]
+"src/docs/conf.py" = ["A001"]
 "src/tests/**/*.py" = [
     "TCH001",
     "TCH002",
