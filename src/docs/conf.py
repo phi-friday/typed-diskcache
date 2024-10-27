@@ -30,7 +30,7 @@ author = "Choi Min-yeong"
 kr_timezone = timezone(timedelta(hours=9))
 copyright = f"2024-{datetime.now(kr_timezone).year}, Choi Min-yeong"
 release = environ.get("READTHEDOCS_GIT_IDENTIFIER", dist.version)
-repo_url: str = pyproject_dict["project"]["urls"]["Source"]
+repo_url: str = pyproject_dict["project"]["urls"]["Repository"]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

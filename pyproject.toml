@@ -82,8 +82,8 @@ check = "pre-commit run --all-files --show-diff-on-failure"
 "_lint:format" = "ruff format src"
 
 [project.urls]
-Source = "https://github.com/phi-friday/typed-diskcache"
 Documentation = "https://typed-diskcache.readthedocs.io/"
+Repository = "https://github.com/phi-friday/typed-diskcache"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
