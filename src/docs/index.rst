@@ -5,6 +5,12 @@
 
 .. toctree::
     :hidden:
+    :caption: LICENSES
+
+    licenses/index
+
+.. toctree::
+    :hidden:
     :maxdepth: 2
     :caption: API
 
