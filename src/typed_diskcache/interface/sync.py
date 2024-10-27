@@ -23,20 +23,26 @@ class SyncLockProtocol(Protocol):
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 
-    >>> import typed_diskcache
-    >>> cache = typed_diskcache.Cache()
-    >>> lock = typed_diskcache.SyncLock(cache, "some-key")
-    >>> lock.acquire()
-    >>> lock.release()
-    >>> with lock:
-    ...     pass
-
     Args:
         cache: Cache to use for lock.
         key: Key for lock.
         timeout: Timeout for lock.
         expire: Expiration time for lock.
         tags: Tags for lock.
+
+    Examples:
+        .. code-block:: python
+
+            import typed_diskcache
+
+
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                lock = typed_diskcache.SyncLock(cache, "some-key")
+                lock.acquire()
+                lock.release()
+                with lock:
+                    pass
     """
 
     def __init__(
@@ -98,15 +104,6 @@ class SyncSemaphoreProtocol(Protocol):
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 
-    >>> import typed_diskcache
-    >>> cache = typed_diskcache.Cache()
-    >>> semaphore = typed_diskcache.SyncSemaphore(cache, "some-key", value=2)
-    >>> semaphore.acquire()
-    >>> semaphore.acquire()
-    >>> semaphore.release()
-    >>> with semaphore:
-    ...     pass
-
     Args:
         cache: Cache to use for semaphore.
         key: Key for semaphore.
@@ -114,6 +111,21 @@ class SyncSemaphoreProtocol(Protocol):
         timeout: Timeout for semaphore.
         expire: Expiration time for semaphore.
         tags: Tags for semaphore.
+
+    Examples:
+        .. code-block:: python
+
+            import typed_diskcache
+
+
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                semaphore = typed_diskcache.SyncSemaphore(cache, "some-key", value=2)
+                semaphore.acquire()
+                semaphore.acquire()
+                semaphore.release()
+                with semaphore:
+                    pass
     """
 
     def __init__(  # noqa: PLR0913
@@ -178,21 +190,26 @@ class AsyncLockProtocol(Protocol):
 
     Asynchronous version of `SyncLock`.
 
-    >>> import typed_diskcache
-    >>> async def main() -> None:
-    ...     cache = typed_diskcache.Cache()
-    ...     lock = typed_diskcache.AsyncLock(cache, "some-key")
-    ...     await lock.acquire()
-    ...     await lock.release()
-    ...     async with lock:
-    ...         pass
-
     Args:
         cache: Cache to use for lock.
         key: Key for lock.
         timeout: Timeout for lock.
         expire: Expiration time for lock.
         tags: Tags for lock.
+
+    Examples:
+        .. code-block:: python
+
+            import typed_diskcache
+
+
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                lock = typed_diskcache.AsyncLock(cache, "some-key")
+                await lock.acquire()
+                await lock.release()
+                async with lock:
+                    pass
     """
 
     def __init__(
@@ -254,16 +271,6 @@ class AsyncSemaphoreProtocol(Protocol):
 
     Asynchronous version of `SyncSemaphore`.
 
-    >>> import typed_diskcache
-    >>> async def main() -> None:
-    ...     cache = typed_diskcache.Cache()
-    ...     semaphore = typed_diskcache.AsyncSemaphore(cache, "some-key", value=2)
-    ...     await semaphore.acquire()
-    ...     await semaphore.acquire()
-    ...     await semaphore.release()
-    ...     async with semaphore:
-    ...         pass
-
     Args:
         cache: Cache to use for semaphore.
         key: Key for semaphore.
@@ -271,6 +278,21 @@ class AsyncSemaphoreProtocol(Protocol):
         timeout: Timeout for semaphore.
         expire: Expiration time for semaphore.
         tags: Tags for semaphore.
+
+    Examples:
+        .. code-block:: python
+
+            import typed_diskcache
+
+
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                semaphore = typed_diskcache.AsyncSemaphore(cache, "some-key", value=2)
+                await semaphore.acquire()
+                await semaphore.acquire()
+                await semaphore.release()
+                async with semaphore:
+                    pass
     """
 
     def __init__(  # noqa: PLR0913

@@ -1,5 +1,10 @@
 .. toctree::
     :hidden:
+
+    README <self>
+
+.. toctree::
+    :hidden:
     :maxdepth: 2
     :caption: API
 
