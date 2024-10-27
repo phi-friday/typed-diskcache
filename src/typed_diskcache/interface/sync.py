@@ -136,7 +136,7 @@ class SyncSemaphoreProtocol(Protocol):
         *,
         timeout: float = ...,
         expire: float | None = ...,
-        tag: str | Iterable[str] | None = ...,
+        tags: str | Iterable[str] | None = ...,
     ) -> None: ...
     @property
     def key(self) -> Any:
@@ -303,7 +303,7 @@ class AsyncSemaphoreProtocol(Protocol):
         *,
         timeout: float = ...,
         expire: float | None = ...,
-        tag: str | Iterable[str] | None = ...,
+        tags: str | Iterable[str] | None = ...,
     ) -> None: ...
     @property
     def key(self) -> Any:

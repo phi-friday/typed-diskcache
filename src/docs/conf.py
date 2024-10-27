@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timedelta, timezone
 from importlib.metadata import distribution
 from pathlib import Path
 
@@ -15,7 +16,6 @@ if sys.version_info >= (3, 11):
     import tomllib as toml
 else:
     import tomli as toml
-
 
 conf = Path(__file__).resolve()
 sys.path.insert(0, str(conf.parent.parent))
@@ -26,7 +26,8 @@ with pyproject.open("rb") as f:
 project = pyproject_dict["project"]["name"]
 dist = distribution(project)
 author = "Choi Min-yeong"
-copyright = "2024, Choi Min-yeong"
+kr_timezone = timezone(timedelta(hours=9))
+copyright = f"2024-{datetime.now(kr_timezone).year}, Choi Min-yeong"
 release = dist.version
 repo_url: str = pyproject_dict["project"]["urls"]["Source"]
 
