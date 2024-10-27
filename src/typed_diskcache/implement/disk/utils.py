@@ -4,11 +4,12 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-import anyio
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from anyio import Path as AnyioPath
 
     from typed_diskcache.interface.disk import DiskProtocol
 
@@ -69,24 +70,26 @@ def write(
 
 @overload
 async def async_write(
-    full_path: Path | anyio.Path,
+    full_path: Path | AnyioPath,
     iterator: Iterator[str] | AsyncIterator[str],
     mode: OpenTextModeWriting,
     encoding: str | None = None,
 ) -> int | None: ...
 @overload
 async def async_write(
-    full_path: Path | anyio.Path,
+    full_path: Path | AnyioPath,
     iterator: Iterator[bytes] | AsyncIterator[bytes],
     mode: OpenBinaryModeWriting,
     encoding: str | None = None,
 ) -> int | None: ...
 async def async_write(
-    full_path: Path | anyio.Path,
+    full_path: Path | AnyioPath,
     iterator: Iterator[str | bytes] | AsyncIterator[str | bytes],
     mode: OpenTextModeWriting | OpenBinaryModeWriting,
     encoding: str | None = None,
 ) -> int | None:
+    import anyio
+
     full_path = anyio.Path(full_path)
     full_dir = full_path.parent
 

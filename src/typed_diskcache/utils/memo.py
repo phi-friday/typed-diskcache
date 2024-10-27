@@ -11,7 +11,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Generic, Protocol, overload
 
-import anyio
 from pydantic import TypeAdapter
 from typing_extensions import ParamSpec, TypeVar, override
 
@@ -588,6 +587,8 @@ def async_thread_recompute(
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> None:
+    import anyio
+
     new_func = partial(
         async_thread_recompute_process, cache, key, func, expire, tags, *args, **kwargs
     )

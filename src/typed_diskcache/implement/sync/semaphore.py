@@ -4,7 +4,6 @@ import time
 from contextlib import AsyncExitStack, ExitStack
 from typing import TYPE_CHECKING, Any
 
-import anyio
 from pydantic import TypeAdapter
 from typing_extensions import override
 
@@ -187,6 +186,8 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
     @context("AsyncSemaphore.acquire")
     @override
     async def acquire(self) -> None:
+        import anyio
+
         try:
             async with AsyncExitStack() as stack:
                 stack.enter_context(anyio.fail_after(self.timeout))

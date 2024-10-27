@@ -7,7 +7,6 @@ from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextma
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-import anyio
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
 from typing_extensions import TypeAlias, TypeVar, Unpack
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     )
     from os import PathLike
 
+    from anyio import Path as AnyioPath
     from anyio.streams.memory import MemoryObjectSendStream
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
@@ -262,6 +262,8 @@ async def aiter_disk(
 def extend_queue(
     stream: MemoryObjectSendStream[_T],
 ) -> Callable[[Iterable[_T]], Awaitable[Any]]:
+    import anyio
+
     async def extend(items: Iterable[_T]) -> None:
         logger.debug("Stream stats: %r", stream.statistics())
         with stream.clone() as clone:
@@ -469,6 +471,8 @@ async def async_transact(
     filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
 ) -> AsyncGenerator[tuple[AsyncSession, AsyncCleanupFunc], None]:
+    import anyio
+
     send, receive = anyio.create_memory_object_stream["str | PathLike[str] | None"](
         1_000_000
     )
@@ -1027,7 +1031,7 @@ async def acheck_files(
     fix: bool,
     stacklevel: int = 2,
 ) -> None:
-    filenames: set[anyio.Path] = set()
+    filenames: set[AnyioPath] = set()
     rows_fetch = await session.execute(
         sa.select(
             CacheTable.id,
@@ -1070,9 +1074,11 @@ async def acheck_file_exists(  # noqa: PLR0913
     row: sa.Row[tuple[int, int, str]],
     directory: str | PathLike[str],
     fix: bool,
-    filenames: set[anyio.Path],
+    filenames: set[AnyioPath],
     stacklevel: int = 3,
 ) -> None:
+    import anyio
+
     full_path: anyio.Path = anyio.Path(directory) / row.filepath
     filenames.add(full_path)
 
@@ -1104,9 +1110,11 @@ async def acheck_unknown_file(
     dirpath: str | PathLike[str],
     fix: bool,
     files: list[str],
-    filenames: set[anyio.Path],
+    filenames: set[AnyioPath],
     stacklevel: int = 3,
 ) -> None:
+    import anyio
+
     paths = {anyio.Path(dirpath) / file for file in files}
     error = paths - filenames
 
@@ -1131,6 +1139,8 @@ async def acheck_empty_dir(
     fix: bool,
     stacklevel: int = 3,
 ) -> None:
+    import anyio
+
     if not (dirs or files):
         message = f"Empty directory: {dirpath}"
         warnings.warn(message, te.TypedDiskcacheEmptyDirWarning, stacklevel=stacklevel)

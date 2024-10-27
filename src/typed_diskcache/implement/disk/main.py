@@ -8,7 +8,6 @@ import zlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import anyio
 import cloudpickle
 from typing_extensions import override
 
@@ -272,6 +271,8 @@ class Disk(DiskProtocol):
     async def afetch(  # noqa: PLR0911
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
+        import anyio
+
         if mode == CacheMode.NONE:
             logger.debug("Fetching null value")
             return None
@@ -330,6 +331,8 @@ class Disk(DiskProtocol):
     @context
     @override
     async def aremove(self, file_path: str | PathLike[str]) -> None:
+        import anyio
+
         full_path = anyio.Path(self._directory / file_path)
         full_dir = full_path.parent
 

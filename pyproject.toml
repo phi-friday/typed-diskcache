@@ -22,7 +22,6 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "anyio>=4",
     "cloudpickle>=3.1.0",
     "pydantic>=2",
     "sqlalchemy-utils",
@@ -33,6 +32,7 @@ dependencies = [
 ]
 [project.optional-dependencies]
 asyncio = [
+    "anyio>=4",
     "aiosqlite",
     "sqlalchemy[asyncio]>=2",
 ]
@@ -44,6 +44,7 @@ test = [
     "pytest-env>=1.1.5",
     "pytest-xdist>=3.6.1",
     "uvloop>=0.21.0",
+    "typed-diskcache[asyncio]"
 ]
 dev = [
     { include-group = "test"},
@@ -51,7 +52,6 @@ dev = [
     "ipykernel>=6.29.5",
     "pre-commit>=4.0.1",
     "poethepoet>=0.29.0",
-    "typed-diskcache[asyncio]"
 ]
 docs = [
     "linkify-it-py>=2.0.3; python_version < '3.10'",

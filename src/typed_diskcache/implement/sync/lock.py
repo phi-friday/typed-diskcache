@@ -6,7 +6,6 @@ import time
 from contextlib import AsyncExitStack, ExitStack
 from typing import TYPE_CHECKING, Any
 
-import anyio
 from pydantic import TypeAdapter
 from typing_extensions import override
 
@@ -225,6 +224,8 @@ class AsyncLock(AsyncLockProtocol):
     @context("AsyncLock.acquire")
     @override
     async def acquire(self) -> None:
+        import anyio
+
         try:
             with anyio.fail_after(self.timeout):
                 while True:
@@ -264,6 +265,8 @@ class AsyncRLock(AsyncLock):
     @context("AsyncRLock.acquire")
     @override
     async def acquire(self) -> None:
+        import anyio
+
         pid = os.getpid()
         tid = threading.get_ident()
         pid_tid = f"{pid}-{tid}"
