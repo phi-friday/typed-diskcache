@@ -68,6 +68,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # [3, 2, 1, 0, 0, -1, -2, -3]
     """
 
+    __slots__ = ("_cache", "_maxlen")
+
     def __init__(
         self,
         values: Iterable[_T] | None = None,
