@@ -1,0 +1,119 @@
+site_name: typed-diskcache
+site_url: https://typed-diskcache.readthedocs.io
+repo_url: https://github.com/phi-friday/typed-diskcache
+repo_name: phi-friday/typed-diskcache
+docs_dir: src/docs
+watch:
+  - src/typed_diskcache
+nav:
+  - README: index.md
+  - LICENSES:
+      LICENSE: licenses/license.md
+      python-diskcache: licenses/python-diskcache.md
+  - API:
+      Types:
+        Types: api/types/types.md
+        Models: api/types/models.md
+      Cache:
+        Cache: api/cache/cache.md
+        FanoutCache: api/cache/fanout.md
+        CacheProtocol: api/cache/cache_protocol.md
+      Disk:
+        Disk: api/disk/disk.md
+        DiskProtocol: api/disk/disk_protocol.md
+      Synchronization:
+        Lock: api/sync/lock.md
+        LockProtocol: api/sync/lock_protocol.md
+        Semaphore: api/sync/semaphore.md
+        SemaphoreProtocol: api/sync/semaphore_protocol.md
+      Utils:
+        Deque: api/utils/deque.md
+        Memoize: api/utils/memo.md
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.follow
+    - content.code.copy
+markdown_extensions:
+  - pymdownx.snippets
+  - pymdownx.tasklist
+  - pymdownx.highlight:
+      linenums: true
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          import:
+            - https://docs.python.org/3/objects.inv
+          options:
+            extensions:
+              - griffe_pydantic:
+                  schema: true
+            # general
+            allow_inspection: true
+            show_bases: true
+            show_source: false
+            # title
+            heading_level: 1
+            parameter_headings: true
+            show_root_toc_entry: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_root_members_full_path: false
+            show_object_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            # members
+            members: null
+            inherited_members: true
+            members_order: source
+            summary: false
+            show_labels: true
+            filters:
+              - "!^_[^_]"
+            # docstring
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: true
+              trim_doctest_flags: true
+            docstring_section_style: table
+            merge_init_into_class: true
+            # signatures
+            annotations_path: "brief"
+            line_length: 60
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
