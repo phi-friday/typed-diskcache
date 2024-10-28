@@ -1,2 +1,2 @@
-::: typed_diskcache.interface.SyncSemaphoreProtocol
-::: typed_diskcache.interface.AsyncSemaphoreProtocol
+::: typed_diskcache.SyncSemaphore
+::: typed_diskcache.AsyncSemaphore

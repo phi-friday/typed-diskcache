@@ -776,23 +776,23 @@ class CacheProtocol(Protocol):
             key for item in cache
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    print(cache.push("first value"))
-                    # 500000000000000
-                    print(cache.get(500000000000000))
-                    # first value
-                    print(cache.push("second value"))
-                    # 500000000000001
-                    print(cache.push("third value", side="front"))
-                    # 499999999999999
-                    print(cache.push(1234, prefix="userids"))
-                    # userids-500000000000000
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                print(cache.push("first value"))
+                # 500000000000000
+                print(cache.get(500000000000000))
+                # first value
+                print(cache.push("second value"))
+                # 500000000000001
+                print(cache.push("third value", side="front"))
+                # 499999999999999
+                print(cache.push(1234, prefix="userids"))
+                # userids-500000000000000
+            ```
         """
         ...
 
@@ -829,23 +829,23 @@ class CacheProtocol(Protocol):
             key for item in cache
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                async def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    print(await cache.apush("first value"))
-                    # 500000000000000
-                    print(await cache.aget(500000000000000))
-                    # first value
-                    print(await cache.apush("second value"))
-                    # 500000000000001
-                    print(await cache.apush("third value", side="front"))
-                    # 499999999999999
-                    print(await cache.apush(1234, prefix="userids"))
-                    # userids-500000000000000
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                print(await cache.apush("first value"))
+                # 500000000000000
+                print(await cache.aget(500000000000000))
+                # first value
+                print(await cache.apush("second value"))
+                # 500000000000001
+                print(await cache.apush("third value", side="front"))
+                # 499999999999999
+                print(await cache.apush(1234, prefix="userids"))
+                # userids-500000000000000
+            ```
         """
         ...
 
@@ -914,33 +914,33 @@ class CacheProtocol(Protocol):
             value for item or default if queue is empty
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    print(cache.pull())
-                    # Container(default=True, expire_time=None, tags=None)
-                    for letter in "abc":
-                        print(cache.push(letter))
-                    # 500000000000000
-                    # 500000000000001
-                    # 500000000000002
-                    container = cache.pull()
-                    print(container.key)
-                    # 500000000000000
-                    print(container.value)
-                    # a
-                    container = cache.pull(side="back")
-                    print(container.value)
-                    # c
-                    print(cache.push(1234, prefix="userids"))
-                    # userids-500000000000000
-                    container = cache.pull(prefix="userids")
-                    print(container.value)
-                    # 1234
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                print(cache.pull())
+                # Container(default=True, expire_time=None, tags=None)
+                for letter in "abc":
+                    print(cache.push(letter))
+                # 500000000000000
+                # 500000000000001
+                # 500000000000002
+                container = cache.pull()
+                print(container.key)
+                # 500000000000000
+                print(container.value)
+                # a
+                container = cache.pull(side="back")
+                print(container.value)
+                # c
+                print(cache.push(1234, prefix="userids"))
+                # userids-500000000000000
+                container = cache.pull(prefix="userids")
+                print(container.value)
+                # 1234
+            ```
         """
         ...
 
@@ -1011,33 +1011,33 @@ class CacheProtocol(Protocol):
             value for item or default if queue is empty
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                async def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    print(await cache.apull())
-                    # Container(default=True, expire_time=None, tags=None)
-                    for letter in "abc":
-                        print(await cache.apush(letter))
-                    # 500000000000000
-                    # 500000000000001
-                    # 500000000000002
-                    container = await cache.apull()
-                    print(container.key)
-                    # 500000000000000
-                    print(container.value)
-                    # a
-                    container = await cache.apull(side="back")
-                    print(container.value)
-                    # c
-                    print(await cache.apush(1234, prefix="userids"))
-                    # userids-500000000000000
-                    container = await cache.apull(prefix="userids")
-                    print(container.value)
-                    # 1234
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                print(await cache.apull())
+                # Container(default=True, expire_time=None, tags=None)
+                for letter in "abc":
+                    print(await cache.apush(letter))
+                # 500000000000000
+                # 500000000000001
+                # 500000000000002
+                container = await cache.apull()
+                print(container.key)
+                # 500000000000000
+                print(container.value)
+                # a
+                container = await cache.apull(side="back")
+                print(container.value)
+                # c
+                print(await cache.apush(1234, prefix="userids"))
+                # userids-500000000000000
+                container = await cache.apull(prefix="userids")
+                print(container.value)
+                # 1234
+            ```
         """
         ...
 
@@ -1107,28 +1107,28 @@ class CacheProtocol(Protocol):
             value for item or default if queue is empty
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for letter in "abc":
-                        print(cache.push(letter))
-                    # 500000000000000
-                    # 500000000000001
-                    # 500000000000002
-                    container = cache.peek()
-                    print(container.key)
-                    # 500000000000002
-                    print(container.value)
-                    # c
-                    container = cache.peek(side="front")
-                    print(container.key)
-                    # 500000000000000
-                    print(container.value)
-                    # a
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                for letter in "abc":
+                    print(cache.push(letter))
+                # 500000000000000
+                # 500000000000001
+                # 500000000000002
+                container = cache.peek()
+                print(container.key)
+                # 500000000000002
+                print(container.value)
+                # c
+                container = cache.peek(side="front")
+                print(container.key)
+                # 500000000000000
+                print(container.value)
+                # a
+            ```
         """
         ...
 
@@ -1200,28 +1200,28 @@ class CacheProtocol(Protocol):
             value for item or default if queue is empty
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                async def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for letter in "abc":
-                        print(await cache.apush(letter))
-                    # 500000000000000
-                    # 500000000000001
-                    # 500000000000002
-                    container = await cache.apeek()
-                    print(container.key)
-                    # 500000000000002
-                    print(container.value)
-                    # c
-                    container = await cache.apeek(side="front")
-                    print(container.key)
-                    # 500000000000000
-                    print(container.value)
-                    # a
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                for letter in "abc":
+                    print(await cache.apush(letter))
+                # 500000000000000
+                # 500000000000001
+                # 500000000000002
+                container = await cache.apeek()
+                print(container.key)
+                # 500000000000002
+                print(container.value)
+                # c
+                container = await cache.apeek(side="front")
+                print(container.key)
+                # 500000000000000
+                print(container.value)
+                # a
+            ```
         """
         ...
 
@@ -1239,21 +1239,21 @@ class CacheProtocol(Protocol):
             value for item
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for num, letter in enumerate("abc"):
-                        cache[letter] = num
-                    container = cache.peekitem()
-                    print(container.key, container.value)
-                    # ('c', 2)
-                    container = cache.peekitem(last=False)
-                    print(container.key, container.value)
-                    # ('a', 0)
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                for num, letter in enumerate("abc"):
+                    cache[letter] = num
+                container = cache.peekitem()
+                print(container.key, container.value)
+                # ('c', 2)
+                container = cache.peekitem(last=False)
+                print(container.key, container.value)
+                # ('a', 0)
+            ```
         """
         ...
 
@@ -1273,21 +1273,21 @@ class CacheProtocol(Protocol):
             value for item
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                async def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for num, letter in enumerate("abc"):
-                        cache[letter] = num
-                    container = await cache.apeekitem()
-                    print(container.key, container.value)
-                    # ('c', 2)
-                    container = await cache.apeekitem(last=False)
-                    print(container.key, container.value)
-                    # ('a', 0)
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                for num, letter in enumerate("abc"):
+                    cache[letter] = num
+                container = await cache.apeekitem()
+                print(container.key, container.value)
+                # ('c', 2)
+                container = await cache.apeekitem(last=False)
+                print(container.key, container.value)
+                # ('a', 0)
+            ```
         """
         ...
 
@@ -1348,19 +1348,19 @@ class CacheProtocol(Protocol):
             key of item
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for key in [4, 1, 3, 0, 2]:
-                        cache[key] = key
-                    print(list(cache.iterkeys()))
-                    # [0, 1, 2, 3, 4]
-                    print(list(cache.iterkeys(reverse=True)))
-                    # [4, 3, 2, 1, 0]
+            def main() -> None:
+                cache = typed_diskcache.Cache()
+                for key in [4, 1, 3, 0, 2]:
+                    cache[key] = key
+                print(list(cache.iterkeys()))
+                # [0, 1, 2, 3, 4]
+                print(list(cache.iterkeys(reverse=True)))
+                # [4, 3, 2, 1, 0]
+            ```
         """
         ...
 
@@ -1376,19 +1376,19 @@ class CacheProtocol(Protocol):
             key of item
 
         Examples:
-            .. code-block:: python
+            ```python
+            import typed_diskcache
 
-                import typed_diskcache
 
-
-                async def main() -> None:
-                    cache = typed_diskcache.Cache()
-                    for key in [4, 1, 3, 0, 2]:
-                        cache[key] = key
-                    print([x async for x in cache.aiterkeys()])
-                    # [0, 1, 2, 3, 4]
-                    print([x async for x in cache.aiterkeys(reverse=True)])
-                    # [4, 3, 2, 1, 0]
+            async def main() -> None:
+                cache = typed_diskcache.Cache()
+                for key in [4, 1, 3, 0, 2]:
+                    cache[key] = key
+                print([x async for x in cache.aiterkeys()])
+                # [0, 1, 2, 3, 4]
+                print([x async for x in cache.aiterkeys(reverse=True)])
+                # [4, 3, 2, 1, 0]
+            ```
         """
         ...
 

@@ -339,45 +339,45 @@ def memoize(
     attribute. This is useful for introspection, for bypassing the cache,
     or for rewrapping the function with a different cache.
 
-    .. code-block:: python
-
-        from typed_diskcache import Cache
-        from typed_diskcache.utils.memo import memoize_stampede
-
-
-        cache = Cache()
-
-        @cache.memoize(expire=1, tag="fib")
-        def fibonacci(number):
-            if number == 0:
-                return 0
-            elif number == 1:
-                return 1
-            else:
-                return fibonacci(number - 1) + fibonacci(number - 2)
+    ```python
+    from typed_diskcache import Cache
+    from typed_diskcache.utils.memo import memoize_stampede
 
 
-        print(fibonacci(100))
-        # 354224848179261915075
+    cache = Cache()
+
+    @cache.memoize(expire=1, tag="fib")
+    def fibonacci(number):
+        if number == 0:
+            return 0
+        elif number == 1:
+            return 1
+        else:
+            return fibonacci(number - 1) + fibonacci(number - 2)
+
+
+    print(fibonacci(100))
+    # 354224848179261915075
+    ```
 
     An additional `cache_key` method can be used to generate the
     cache key used for the given arguments.
 
-    .. code-block:: python
-
-        key = fibonacci.cache_key(100)
-        print(cache[key])
-        # 354224848179261915075
+    ```python
+    key = fibonacci.cache_key(100)
+    print(cache[key])
+    # 354224848179261915075
+    ```
 
     Remember to call memoize when decorating a callable. If you forget,
     then a TypeError will occur. Note the lack of parenthenses after
     memoize below:
 
-    .. code-block:: python
-
-        @cache.memoize
-        def test():
-            pass
+    ```python
+    @cache.memoize
+    def test():
+        pass
+    ```
 
     Args:
         cache: cache to store callable arguments and return values
@@ -448,34 +448,34 @@ def memoize_stampede(
     attribute. This is useful for introspection, for bypassing the cache, or
     for rewrapping the function with a different cache.
 
-    .. code-block:: python
-
-        from typed_diskcache import Cache
-        from typed_diskcache.utils.memo import memoize_stampede
-
-
-        cache = Cache()
-
-        @memoize_stampede(cache, expire=1)
-        def fib(number):
-            if number == 0:
-                return 0
-            elif number == 1:
-                return 1
-            else:
-                return fib(number - 1) + fib(number - 2)
+    ```python
+    from typed_diskcache import Cache
+    from typed_diskcache.utils.memo import memoize_stampede
 
 
-        print(fib(100))
-        # 354224848179261915075
+    cache = Cache()
+
+    @memoize_stampede(cache, expire=1)
+    def fib(number):
+        if number == 0:
+            return 0
+        elif number == 1:
+            return 1
+        else:
+            return fib(number - 1) + fib(number - 2)
+
+
+    print(fib(100))
+    # 354224848179261915075
+    ```
 
     An additional `cache_key` method can be used to generate the cache
     key used for the given arguments.
 
-    .. code-block:: python
-
-        key = fib.cache_key(100)
-        del cache[key]
+    ```python
+    key = fib.cache_key(100)
+    del cache[key]
+    ```
 
     Remember to call memoize when decorating a callable. If you forget, then a
     TypeError will occur.
