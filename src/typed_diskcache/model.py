@@ -51,7 +51,7 @@ class SQLiteSettings(BaseModel):
 class Settings(BaseModel):
     """Settings for the cache."""
 
-    model_config = ConfigDict(frozen=False)
+    model_config = ConfigDict(frozen=True)
 
     statistics: bool = False
     eviction_policy: EvictionPolicy = EvictionPolicy.LEAST_RECENTLY_STORED

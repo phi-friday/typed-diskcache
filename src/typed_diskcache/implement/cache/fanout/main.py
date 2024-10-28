@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.model import Settings
 
 __all__ = ["FanoutCache"]
 
@@ -104,10 +105,10 @@ class FanoutCache(CacheProtocol):
         )
         fanout_utils.update_shards_state(
             self._shards,
-            self._directory,
-            self._disk,
+            self.directory,
+            self.disk,
             self.conn,
-            self._settings,
+            self.settings,
             self._page_size,
         )
 
@@ -162,7 +163,7 @@ class FanoutCache(CacheProtocol):
             "directory": str(self.directory),
             "disk": cloudpickle.dumps(self.disk),
             "conn": cloudpickle.dumps(self.conn),
-            "settings": self._settings.model_dump_json(),
+            "settings": self.settings.model_dump_json(),
             "page_size": self._page_size,
         }
 
@@ -184,7 +185,7 @@ class FanoutCache(CacheProtocol):
             self._directory,
             self._disk,
             self.conn,
-            self._settings,
+            self.settings,
             self._page_size,
         )
 
@@ -207,6 +208,11 @@ class FanoutCache(CacheProtocol):
     @override
     def disk(self) -> DiskProtocol:
         return self._disk
+
+    @property
+    @override
+    def settings(self) -> Settings:
+        return self._settings
 
     @overload
     def get(
@@ -326,6 +332,10 @@ class FanoutCache(CacheProtocol):
             shard_stats = shard.stats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
+
+        settings = self._settings = self._shards[0].settings
+        for shard in self._shards[1:]:
+            shard._settings = settings  # noqa: SLF001
         return Stats(hits=hits, misses=misses)
 
     @override
@@ -335,6 +345,10 @@ class FanoutCache(CacheProtocol):
             shard_stats = await shard.astats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
+
+        settings = self._settings = self._shards[0].settings
+        for shard in self._shards[1:]:
+            shard._settings = settings  # noqa: SLF001
         return Stats(hits=hits, misses=misses)
 
     @override

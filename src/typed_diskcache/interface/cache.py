@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     )
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.model import Settings
 
 _AnyT = TypeVar("_AnyT", default=Any)
 
@@ -79,6 +80,11 @@ class CacheProtocol(Protocol):
     @property
     def disk(self) -> DiskProtocol:
         """Disk object."""
+        ...
+
+    @property
+    def settings(self) -> Settings:
+        """Settings for cache."""
         ...
 
     @overload

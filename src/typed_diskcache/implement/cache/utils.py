@@ -91,7 +91,7 @@ def init_args(
             disk_type = settings.load_disk()
         logger.debug("Creating new disk")
         disk = disk_type(directory, **(disk_args or {}))
-        settings.serialized_disk = disk.model_dump()
+        settings = settings.model_copy(update={"serialized_disk": disk.model_dump()})
 
     now = datetime.now(timezone(timedelta(0)))
     new_setting_records = [

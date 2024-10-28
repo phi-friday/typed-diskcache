@@ -53,6 +53,7 @@ if TYPE_CHECKING:
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.model import Settings
 
 __all__ = ["Cache"]
 
@@ -129,7 +130,7 @@ class Cache(CacheProtocol):
     @context("Cache.contains")
     @override
     def __contains__(self, key: Any) -> bool:
-        db_key, raw = self._disk.put(key)
+        db_key, raw = self.disk.put(key)
         with self.conn.sync_session as session:
             row = session.execute(
                 sa.select(CacheTable.id).where(
@@ -178,7 +179,7 @@ class Cache(CacheProtocol):
             "directory": str(self.directory),
             "disk": cloudpickle.dumps(self.disk),
             "conn": cloudpickle.dumps(self.conn),
-            "settings": self._settings.model_dump_json(),
+            "settings": self.settings.model_dump_json(),
             "page_size": self._page_size,
         }
 
@@ -214,6 +215,11 @@ class Cache(CacheProtocol):
     def disk(self) -> DiskProtocol:
         return self._disk
 
+    @property
+    @override
+    def settings(self) -> Settings:
+        return self._settings
+
     @overload
     def get(
         self, key: Any, default: _AnyT, *, retry: bool = ...
@@ -230,8 +236,8 @@ class Cache(CacheProtocol):
         select_stmt = default_utils.prepare_get_stmt(self.disk, key)
 
         if (
-            not self._settings.statistics
-            and self._settings.eviction_policy == EvictionPolicy.NONE
+            not self.settings.statistics
+            and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
             with self.conn.sync_session as session:
@@ -268,7 +274,7 @@ class Cache(CacheProtocol):
 
             if row is None:
                 logger.debug("Key `%s` not found", key)
-                if self._settings.statistics:
+                if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
                     session.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
@@ -279,12 +285,12 @@ class Cache(CacheProtocol):
                 )
             except OSError:
                 logger.debug("Key `%s` file `%s` not found", key, row.filepath)
-                if self._settings.statistics:
+                if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
                     session.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
-            if self._settings.statistics:
+            if self.settings.statistics:
                 logger.debug("Update cache hit statistics")
                 session.execute(cache_hit_stmt)
             if update_stmt is not None:
@@ -317,8 +323,8 @@ class Cache(CacheProtocol):
         select_stmt = default_utils.prepare_get_stmt(self.disk, key)
 
         if (
-            not self._settings.statistics
-            and self._settings.eviction_policy == EvictionPolicy.NONE
+            not self.settings.statistics
+            and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
             async with self.conn.async_session as session:
@@ -358,7 +364,7 @@ class Cache(CacheProtocol):
 
             if row is None:
                 logger.debug("Key `%s` not found", key)
-                if self._settings.statistics:
+                if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
                     await session.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
@@ -369,12 +375,12 @@ class Cache(CacheProtocol):
                 )
             except OSError:
                 logger.debug("Key `%s` file `%s` not found", key, row.filepath)
-                if self._settings.statistics:
+                if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
                     await session.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
-            if self._settings.statistics:
+            if self.settings.statistics:
                 logger.debug("Update cache hit statistics")
                 await session.execute(cache_hit_stmt)
             if update_stmt is not None:
@@ -556,7 +562,7 @@ class Cache(CacheProtocol):
         limit: int | None = None,
         stacklevel: int = 2,
     ) -> None:
-        cull_limit = self._settings.cull_limit if limit is None else limit
+        cull_limit = self.settings.cull_limit if limit is None else limit
         if cull_limit <= 0:
             logger.debug(
                 "Culling limit %d is less than or equal to 0",
@@ -583,10 +589,10 @@ class Cache(CacheProtocol):
             if cull_limit <= 0:
                 return
 
-        if select_stmt is None or self.volume() < self._settings.size_limit:
+        if select_stmt is None or self.volume() < self.settings.size_limit:
             logger.debug(
                 "Volume is less than size limit %d",
-                self._settings.size_limit,
+                self.settings.size_limit,
                 stacklevel=stacklevel,
             )
             return
@@ -613,7 +619,7 @@ class Cache(CacheProtocol):
         limit: int | None = None,
         stacklevel: int = 2,
     ) -> None:
-        cull_limit = self._settings.cull_limit if limit is None else limit
+        cull_limit = self.settings.cull_limit if limit is None else limit
         if cull_limit <= 0:
             logger.debug(
                 "Culling limit %d is less than or equal to 0",
@@ -641,10 +647,10 @@ class Cache(CacheProtocol):
             if cull_limit <= 0:
                 return
 
-        if select_stmt is None or await self.avolume() < self._settings.size_limit:
+        if select_stmt is None or await self.avolume() < self.settings.size_limit:
             logger.debug(
                 "Volume is less than size limit %d",
-                self._settings.size_limit,
+                self.settings.size_limit,
                 stacklevel=stacklevel,
             )
             return
@@ -732,7 +738,7 @@ class Cache(CacheProtocol):
             statistic.value = enable
             session.add(statistic)
             session.commit()
-            self._settings.statistics = enable
+            self._settings = self.settings.model_copy(update={"statistics": enable})
 
             return Stats(hits=hits.value, misses=misses.value)
 
@@ -767,7 +773,7 @@ class Cache(CacheProtocol):
             statistic.value = enable
             session.add(statistic)
             await session.commit()
-            self._settings.statistics = enable
+            self._settings = self.settings.model_copy(update={"statistics": enable})
 
             return Stats(hits=hits.value, misses=misses.value)
 
@@ -1417,7 +1423,7 @@ class Cache(CacheProtocol):
             )
         )
         try:
-            while self.volume() > self._settings.size_limit:
+            while self.volume() > self.settings.size_limit:
                 with default_utils.transact(
                     conn=self.conn, disk=self.disk, retry=retry
                 ) as (session, cleanup):
@@ -1459,7 +1465,7 @@ class Cache(CacheProtocol):
             )
         )
         try:
-            while await self.avolume() > self._settings.size_limit:
+            while await self.avolume() > self.settings.size_limit:
                 async with default_utils.async_transact(
                     conn=self.conn, disk=self.disk, retry=retry
                 ) as (session, cleanup):
