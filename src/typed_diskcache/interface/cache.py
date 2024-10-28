@@ -1391,3 +1391,21 @@ class CacheProtocol(Protocol):
                     # [4, 3, 2, 1, 0]
         """
         ...
+
+    def update_settings(self, settings: Settings) -> None:
+        """Update cache settings.
+
+        Args:
+            settings: new settings
+        """
+        ...
+
+    async def aupdate_settings(self, settings: Settings) -> None:
+        """Update cache settings.
+
+        Asynchronous version of `update_settings`.
+
+        Args:
+            settings: new settings
+        """
+        ...

@@ -30,6 +30,7 @@ from typed_diskcache.database.connect import transact as database_transact
 from typed_diskcache.database.model import Cache as CacheTable
 from typed_diskcache.database.model import CacheTag as CacheTagTable
 from typed_diskcache.database.model import Metadata
+from typed_diskcache.database.model import Settings as SettingsTable
 from typed_diskcache.database.model import Tag as TagTable
 from typed_diskcache.log import get_logger
 
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
+    from typed_diskcache.model import Settings
 
 __all__ = []
 
@@ -447,7 +449,7 @@ def transact(
 
         logger.debug("Enter transaction `%s`", filename, stacklevel=stacklevel)
         stack.callback(
-            logger.debug, "Exit transaction `%s`", filename, stacklevel=stacklevel
+            logger.debug, "Exit transaction `%s`", filename, stacklevel=stacklevel + 2
         )
         try:
             yield session, filenames.extend
@@ -1381,3 +1383,36 @@ def check_metadata_size(*, session: Session, fix: bool, stacklevel: int = 2) -> 
                 .values(value=cache_size)
                 .where(Metadata.key == MetadataKey.SIZE)
             )
+
+
+def prepare_update_settings_args(
+    old_settings: Settings, new_settings: Settings
+) -> tuple[Settings, dict[str, Any], sa.Update] | Settings:
+    new_settings = old_settings.model_validate(new_settings)
+    new_settings_dict = new_settings.model_dump(
+        exclude={"sqlite_settings"}, by_alias=True
+    )
+    update_settings = {
+        key: value
+        for key, value in new_settings_dict.items()
+        if getattr(old_settings, key) != value
+    }
+
+    old_sqlite_settings = old_settings.sqlite_settings.model_dump(by_alias=True)
+    new_sqlite_settings = new_settings.sqlite_settings.model_dump(by_alias=True)
+    update_sqlite_settings: dict[str, Any] = {
+        key: value
+        for key, value in new_sqlite_settings.items()
+        if old_sqlite_settings[key] != value
+    }
+    if not update_settings and not update_sqlite_settings:
+        logger.debug("No settings to update")
+        return new_settings
+
+    update_stmt = (
+        sa.update(SettingsTable)
+        .where(SettingsTable.key == sa.bindparam("settings_key"))
+        .values(value=sa.bindparam("settings_value"))
+    )
+
+    return new_settings, update_settings | update_sqlite_settings, update_stmt

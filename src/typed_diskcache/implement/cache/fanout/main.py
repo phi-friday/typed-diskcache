@@ -92,7 +92,9 @@ class FanoutCache(CacheProtocol):
             directory, disk_type, disk_args, timeout, **kwargs
         )
 
-        settings.size_limit //= shard_size
+        settings = settings.model_copy(
+            update={"size_limit": settings.size_limit // shard_size}
+        )
 
         self._shard_size = shard_size
         self._directory = directory
@@ -214,6 +216,10 @@ class FanoutCache(CacheProtocol):
     def settings(self) -> Settings:
         return self._settings
 
+    @settings.setter
+    def settings(self, value: Settings) -> None:
+        self.update_settings(value)
+
     @overload
     def get(
         self, key: Any, default: _AnyT, *, retry: bool = ...
@@ -328,27 +334,35 @@ class FanoutCache(CacheProtocol):
     @override
     def stats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         hits, misses = 0, 0
-        for shard in self._shards:
+        first_shard = next(iter(self._shards))
+        shard_stats = first_shard.stats(enable=enable, reset=reset)
+        hits += shard_stats[0]
+        misses += shard_stats[1]
+
+        for shard in self._shards[1:]:
+            shard._settings = first_shard.settings  # noqa: SLF001
             shard_stats = shard.stats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
 
-        settings = self._settings = self._shards[0].settings
-        for shard in self._shards[1:]:
-            shard._settings = settings  # noqa: SLF001
+        self._settings = first_shard.settings
         return Stats(hits=hits, misses=misses)
 
     @override
     async def astats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         hits, misses = 0, 0
-        for shard in self._shards:
+        first_shard = next(iter(self._shards))
+        shard_stats = await first_shard.astats(enable=enable, reset=reset)
+        hits += shard_stats[0]
+        misses += shard_stats[1]
+
+        for shard in self._shards[1:]:
+            shard._settings = first_shard.settings  # noqa: SLF001
             shard_stats = await shard.astats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
 
-        settings = self._settings = self._shards[0].settings
-        for shard in self._shards[1:]:
-            shard._settings = settings  # noqa: SLF001
+        self._settings = first_shard.settings
         return Stats(hits=hits, misses=misses)
 
     @override
@@ -685,3 +699,21 @@ class FanoutCache(CacheProtocol):
     @override
     async def apeekitem(self, *, last: bool = True, retry: bool = False) -> NoReturn:
         raise te.TypedDiskcacheNotImplementedError
+
+    @override
+    def update_settings(self, settings: Settings) -> None:
+        first_shard = next(iter(self._shards))
+        first_shard.update_settings(settings)
+        settings = first_shard.settings
+        for shard in self._shards[1:]:
+            shard._settings = settings  # noqa: SLF001
+        self._settings = settings
+
+    @override
+    async def aupdate_settings(self, settings: Settings) -> None:
+        first_shard = next(iter(self._shards))
+        await first_shard.aupdate_settings(settings)
+        settings = first_shard.settings
+        for shard in self._shards[1:]:
+            shard._settings = settings  # noqa: SLF001
+        self._settings = settings

@@ -220,6 +220,10 @@ class Cache(CacheProtocol):
     def settings(self) -> Settings:
         return self._settings
 
+    @settings.setter
+    def settings(self, value: Settings) -> None:
+        self.update_settings(value)
+
     @overload
     def get(
         self, key: Any, default: _AnyT, *, retry: bool = ...
@@ -738,7 +742,9 @@ class Cache(CacheProtocol):
             statistic.value = enable
             session.add(statistic)
             session.commit()
-            self._settings = self.settings.model_copy(update={"statistics": enable})
+            self.update_settings(
+                self.settings.model_copy(update={"statistics": enable})
+            )
 
             return Stats(hits=hits.value, misses=misses.value)
 
@@ -773,7 +779,9 @@ class Cache(CacheProtocol):
             statistic.value = enable
             session.add(statistic)
             await session.commit()
-            self._settings = self.settings.model_copy(update={"statistics": enable})
+            await self.aupdate_settings(
+                self.settings.model_copy(update={"statistics": enable})
+            )
 
             return Stats(hits=hits.value, misses=misses.value)
 
@@ -1950,3 +1958,52 @@ class Cache(CacheProtocol):
 
                 for row in rows:
                     yield self.disk.get(row.key, raw=row.raw)
+
+    @context
+    @override
+    def update_settings(self, settings: Settings) -> None:
+        update_args = default_utils.prepare_update_settings_args(
+            self.settings, settings
+        )
+        if not isinstance(update_args, tuple):
+            self._settings = settings
+            self.conn.update_settings(settings)
+            return
+
+        settings, update_settings, update_stmt = update_args
+        with default_utils.transact(conn=self.conn, disk=self.disk, retry=True) as (
+            session,
+            _,
+        ):
+            for key, value in update_settings.items():
+                logger.debug("Update setting `%s` to `%s`", key, value)
+                session.execute(
+                    update_stmt, {"settings_key": key, "settings_value": value}
+                )
+
+        self._settings = settings
+        self.conn.update_settings(settings)
+
+    @context
+    @override
+    async def aupdate_settings(self, settings: Settings) -> None:
+        update_args = default_utils.prepare_update_settings_args(
+            self.settings, settings
+        )
+        if not isinstance(update_args, tuple):
+            self._settings = settings
+            self.conn.update_settings(settings)
+            return
+
+        settings, update_settings, update_stmt = update_args
+        async with default_utils.async_transact(
+            conn=self.conn, disk=self.disk, retry=True
+        ) as (session, _):
+            for key, value in update_settings.items():
+                logger.debug("Update setting `%s` to `%s`", key, value)
+                await session.execute(
+                    update_stmt, {"settings_key": key, "settings_value": value}
+                )
+
+        self._settings = settings
+        self.conn.update_settings(settings)
