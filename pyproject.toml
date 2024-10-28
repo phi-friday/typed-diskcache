@@ -4,10 +4,6 @@ dynamic = ["version"]
 description = "Disk and file backed persistent cache."
 readme = "README.md"
 license = { file = "LICENSE" }
-license-files.paths = [
-    "LICENSE",
-    "src/licenses/python-diskcache"
-]
 authors = [
     { name = "phi", email = "phi.friday@gmail.com" } 
 ]
