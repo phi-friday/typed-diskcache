@@ -13,6 +13,8 @@ from importlib.metadata import distribution
 from os import environ
 from pathlib import Path
 
+from packaging.version import parse
+
 if sys.version_info >= (3, 11):
     import tomllib as toml
 else:
@@ -29,7 +31,15 @@ dist = distribution(project)
 author = "Choi Min-yeong"
 kr_timezone = timezone(timedelta(hours=9))
 copyright = f"2024-{datetime.now(kr_timezone).year}, Choi Min-yeong"
-release = environ.get("READTHEDOCS_GIT_IDENTIFIER", dist.version)
+
+parsed_version = parse(dist.version)
+version = parsed_version.base_version
+readthedocs = environ.get("READTHEDOCS_VERSION")
+if readthedocs and readthedocs in ["latest", "stable", "main", "dev"]:
+    release = readthedocs
+else:
+    release = parsed_version.public
+
 repo_url: str = pyproject_dict["project"]["urls"]["Repository"]
 
 # -- General configuration ---------------------------------------------------
