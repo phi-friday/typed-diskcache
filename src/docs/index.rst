@@ -17,6 +17,7 @@
     cache/index
     disk/index
     sync/index
+    utils/index
 
 .. include:: ../../README.md
     :parser: myst_parser.sphinx_

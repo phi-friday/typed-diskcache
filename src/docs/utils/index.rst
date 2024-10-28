@@ -1,15 +1,15 @@
-Cache
+Utils
 =============================
 
 .. toctree::
     :maxdepth: 1
-    :caption: Implement:
+    :caption: Deque:
 
-    default
-    fanout
+    deque
 
 .. toctree::
     :maxdepth: 1
-    :caption: Interface:
+    :caption: Memoize:
 
-    interface
+    memoize
+
