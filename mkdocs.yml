@@ -70,13 +70,16 @@ markdown_extensions:
   - pymdownx.superfences
 plugins:
   - search
+  - autorefs
   - mkdocstrings:
       handlers:
         python:
           paths:
             - src
           import:
-            - https://docs.python.org/3/objects.inv
+            - url: https://docs.python.org/3/objects.inv
+              domains: [std, py]
+            - https://typing-extensions.readthedocs.io/en/stable/objects.inv
           options:
             extensions:
               - griffe_pydantic:
