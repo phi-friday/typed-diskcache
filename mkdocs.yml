@@ -8,27 +8,27 @@ watch:
 nav:
   - README: index.md
   - LICENSES:
-      LICENSE: licenses/license.md
-      python-diskcache: licenses/python-diskcache.md
+      - LICENSE: licenses/license.md
+      - python-diskcache: licenses/python-diskcache.md
   - API:
-      Types:
-        Types: api/types/types.md
-        Models: api/types/models.md
-      Cache:
-        Cache: api/cache/cache.md
-        FanoutCache: api/cache/fanout.md
-        CacheProtocol: api/cache/cache_protocol.md
-      Disk:
-        Disk: api/disk/disk.md
-        DiskProtocol: api/disk/disk_protocol.md
-      Synchronization:
-        Lock: api/sync/lock.md
-        LockProtocol: api/sync/lock_protocol.md
-        Semaphore: api/sync/semaphore.md
-        SemaphoreProtocol: api/sync/semaphore_protocol.md
-      Utils:
-        Deque: api/utils/deque.md
-        Memoize: api/utils/memo.md
+      - Types:
+          - Types: api/types/types.md
+          - Models: api/types/models.md
+      - Cache:
+          - Cache: api/cache/cache.md
+          - FanoutCache: api/cache/fanout.md
+          - CacheProtocol: api/cache/cache_protocol.md
+      - Disk:
+          - Disk: api/disk/disk.md
+          - DiskProtocol: api/disk/disk_protocol.md
+      - Synchronization:
+          - Lock: api/sync/lock.md
+          - LockProtocol: api/sync/lock_protocol.md
+          - Semaphore: api/sync/semaphore.md
+          - SemaphoreProtocol: api/sync/semaphore_protocol.md
+      - Utils:
+          - Deque: api/utils/deque.md
+          - Memoize: api/utils/memo.md
 theme:
   name: material
   icon:
