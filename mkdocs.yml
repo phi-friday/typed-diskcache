@@ -84,7 +84,7 @@ plugins:
             # general
             allow_inspection: true
             show_bases: true
-            show_source: false
+            show_source: true
             # title
             heading_level: 1
             parameter_headings: true
