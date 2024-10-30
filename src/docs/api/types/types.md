@@ -3,7 +3,12 @@
         show_if_no_docstring: true
         members:
             - SettingsKey
+            - SettingsKwargs
+            - SQLiteAutoVacuum
+            - SQLiteJournalMode
+            - SQLiteSynchronous
             - EvictionPolicy
+            - EvictionPolicyLiteral
             - CacheMode
             - MetadataKey
             - Stats

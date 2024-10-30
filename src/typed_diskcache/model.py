@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, Json, JsonValue
 
-from typed_diskcache.core.types import EvictionPolicy
+from typed_diskcache.core.types import (
+    EvictionPolicy,
+    SQLiteAutoVacuum,
+    SQLiteJournalMode,
+    SQLiteSynchronous,
+)
 from typed_diskcache.interface.disk import DiskProtocol
 
 if TYPE_CHECKING:
@@ -28,13 +33,11 @@ def _parse_disk(disk: Any) -> tuple[str, dict[str, JsonValue]]:
 class SQLiteSettings(BaseModel):
     model_config = ConfigDict(frozen=True, alias_generator=lambda x: f"sqlite_{x}")
 
-    auto_vacuum: Literal[0, "NONE", 1, "FULL", 2, "INCREMENTAL"] = "FULL"
+    auto_vacuum: SQLiteAutoVacuum = "FULL"
     cache_size: int = 2**13
-    journal_mode: Literal["DELETE", "TRUNCATE", "PERSIST", "MEMORY", "WAL", "OFF"] = (
-        "WAL"
-    )
+    journal_mode: SQLiteJournalMode = "WAL"
     mmap_size: int = 2**26
-    synchronous: Literal[0, "OFF", 1, "NORMAL", 2, "FULL", 3, "EXTRA"] = "NORMAL"
+    synchronous: SQLiteSynchronous = "NORMAL"
 
     def listen_connect(
         self,

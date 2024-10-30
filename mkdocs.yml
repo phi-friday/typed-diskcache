@@ -121,3 +121,4 @@ plugins:
             show_signature_annotations: true
             separate_signature: true
             signature_crossrefs: true
+            unwrap_annotated: true

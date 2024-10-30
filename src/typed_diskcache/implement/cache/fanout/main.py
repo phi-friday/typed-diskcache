@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 from sqlalchemy.exc import OperationalError
-from typing_extensions import TypeVar, override
+from typing_extensions import TypeVar, Unpack, override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.types import (
@@ -17,6 +17,7 @@ from typed_diskcache.core.types import (
     FilterMethod,
     QueueSide,
     QueueSideLiteral,
+    SettingsKwargs,
     Stats,
 )
 from typed_diskcache.exception import TypedDiskcacheError
@@ -55,12 +56,13 @@ class FanoutCache(CacheProtocol):
 
     Args:
         directory: directory for cache. Default is `None`.
-        disk_type: `DiskProtocol` class or callable. Default is `None`.
+        disk_type: [`DiskProtocol`][typed_diskcache.interface.disk.DiskProtocol]
+            class or callable. Default is `None`.
         disk_args: keyword arguments for `disk_type`. Default is `None`.
         timeout: connection timeout. Default is 60 seconds.
         shard_size: number of shards. Default is 8.
-        kwargs: additional keyword arguments
-            for `DiskProtocol`, `CacheProtocol` and `Settings`
+        **kwargs: additional keyword arguments for
+            [`Settings`][typed_diskcache.model.Settings].
     """
 
     __slots__ = (
@@ -80,7 +82,7 @@ class FanoutCache(CacheProtocol):
         disk_args: Mapping[str, Any] | None = None,
         timeout: float = 60,
         shard_size: int = 8,
-        **kwargs: Any,
+        **kwargs: Unpack[SettingsKwargs],
     ) -> None:
         if directory is None:
             directory = tempfile.mkdtemp(prefix="typed-diskcache-")

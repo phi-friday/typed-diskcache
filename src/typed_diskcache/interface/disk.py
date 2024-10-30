@@ -19,7 +19,9 @@ class DiskProtocol(Protocol):
 
     Args:
         directory: directory for cache
-        kwargs: additional keyword arguments
+        **kwargs: additional keyword arguments.
+            These arguments may not be used directly in this class,
+            but are added to prevent errors in inherited classes.
     """
 
     def __init__(self, directory: str | PathLike[str], **kwargs: Any) -> None: ...
@@ -28,14 +30,14 @@ class DiskProtocol(Protocol):
 
     @property
     def directory(self) -> Path:
-        """Directory for cache."""
+        """Return the directory for the cache."""
         ...
 
     @directory.setter
     def directory(self, value: str | PathLike[str]) -> None: ...
 
     def hash(self, key: Any) -> int:
-        """Compute portable hash for `key`.
+        """Return the hash value for `key`.
 
         Args:
             key: key to hash
@@ -46,10 +48,13 @@ class DiskProtocol(Protocol):
         ...
 
     def put(self, key: Any) -> tuple[Any, bool]:
-        """Convert `key` to fields key and raw for Cache table.
+        """Convert `key` to a format suitable for storage in the Cache table.
+
+        This method takes a key and converts it into a database-compatible key
+        and a boolean indicating whether the key is in its raw form.
 
         Args:
-            key: key to convert
+            key: The key to convert.
 
         Returns:
             (database key, raw boolean) pair
@@ -57,38 +62,47 @@ class DiskProtocol(Protocol):
         ...
 
     def get(self, key: Any, *, raw: bool) -> Any:
-        """Convert fields `key` and `raw` from Cache table to key.
+        """Convert fields `key` and `raw` from Cache table to a Python key.
+
+        This method takes a database key and a flag indicating if the key is stored
+        in its raw form, and converts them back to the corresponding Python key.
 
         Args:
-            key: database key to convert
-            raw: flag indicating raw database storage
+            key: The database key to convert.
+            raw: A flag indicating if the key is stored in its raw form.
 
         Returns:
-            corresponding Python key
+            The corresponding Python key.
         """
         ...
 
     def prepare(self, value: Any, *, key: Any = ...) -> tuple[Path, Path] | None:
         """Prepare filename and full-path tuple for file storage.
 
+        This method takes a value and an optional key, and prepares a tuple
+        containing the filename and the full path for storing the file.
+
         Args:
-            value: value to store
-            key: key for item
+            value: The value to store.
+            key: The key for the item (optional).
 
         Returns:
-            filename and full-path tuple
+            A tuple containing the filename and full path, or None if preparation fails.
         """
         ...
 
     def store(
         self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
-        """Convert `value` to fields size, mode, filename, and value for Cache table.
+        """Convert `value` to fields for Cache table.
+
+        This method converts a value into a tuple containing the size, mode,
+        filename, and value suitable for storage in the Cache table.
 
         Args:
-            value: value to store
-            key: key for item. Defaults to UNKNOWN.
-            filepath: filename and full-path tuple. Defaults to None.
+            value: The value to store.
+            key: The key for the item.
+            filepath: A tuple containing the filename and full path.
 
         Returns:
             (size, mode, filename, value) tuple for Cache table
@@ -98,14 +112,17 @@ class DiskProtocol(Protocol):
     async def astore(
         self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
-        """Convert `value` to fields size, mode, filename, and value for Cache table.
+        """Asynchronously convert `value` to fields for Cache table.
 
-        Asynchronous version of `store`.
+        This method is the asynchronous version of
+        [`store`][typed_diskcache.interface.disk.DiskProtocol.store].
+        It converts a value into a tuple containing the size, mode, filename, and value
+        suitable for storage in the Cache table.
 
         Args:
-            value: value to store
-            key: key for item. Defaults to UNKNOWN.
-            filepath: filename and full-path tuple. Defaults to None.
+            value: The value to store.
+            key: The key for the item.
+            filepath: A tuple containing the filename and full path.
 
         Returns:
             (size, mode, filename, value) tuple for Cache table
@@ -115,56 +132,62 @@ class DiskProtocol(Protocol):
     def fetch(
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
-        """Convert fields `mode`, `filename`, and `value` from Cache table to value.
+        """Convert fields from Cache table to a Python value.
+
+        This method converts the fields `mode`, `filename`, and `value` from the Cache
+        table back to the corresponding Python value.
 
         Args:
-            mode: value mode none, binary, text, or pickle
-            filename: filename of corresponding value
-            value: database value
+            mode: The mode of the value (none, binary, text, or pickle).
+            filename: The filename of the corresponding value.
+            value: The database value.
 
         Returns:
-            corresponding Python value
+            The corresponding Python value.
         """
         ...
 
     async def afetch(
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
-        """Convert fields `mode`, `filename`, and `value` from Cache table to value.
+        """Asynchronously convert fields from Cache table to a Python value.
 
-        Asynchronous version of `fetch`.
+        This method is the asynchronous version of
+        [`fetch`][typed_diskcache.interface.disk.DiskProtocol.fetch].
+        It converts the fields `mode`, `filename`, and `value`
+        from the Cache table back to the corresponding Python value.
 
         Args:
-            mode: value mode none, binary, text, or pickle
-            filename: filename of corresponding value
-            value: database value
+            mode: The mode of the value (none, binary, text, or pickle).
+            filename: The filename of the corresponding value.
+            value: The database value.
 
         Returns:
-            corresponding Python value
+            The corresponding Python value.
         """
         ...
 
     def remove(self, file_path: str | PathLike[str]) -> None:
         """Remove a file given by `file_path`.
 
-        This method is cross-thread and cross-process safe.
-        If an OSError occurs, it is suppressed.
+        This method is cross-thread and cross-process safe. If an OSError occurs,
+        it is suppressed.
 
         Args:
-            file_path: relative path to file
+            file_path: The relative path to the file.
         """
         ...
 
     async def aremove(self, file_path: str | PathLike[str]) -> None:
-        """Remove a file given by `file_path`.
+        """Asynchronously remove a file given by `file_path`.
 
-        This method is cross-thread and cross-process safe.
+        This method is the asynchronous version of
+        [`remove`][typed_diskcache.interface.disk.DiskProtocol.remove].
+        It is cross-thread and cross-process safe.
         If an OSError occurs, it is suppressed.
 
-        Asynchronous version of `remove`.
-
         Args:
-            file_path: relative path to file
+            file_path: The relative path to the file.
         """
         ...
 
@@ -179,8 +202,8 @@ class DiskProtocol(Protocol):
         The default implementation ignores the `key` and `value` parameters.
 
         Args:
-            key: key for item. Defaults to UNKNOWN.
-            value: value for item. Defaults to UNKNOWN.
+            key: key for item.
+            value: value for item.
 
         Returns:
             filename and full-path tuple
@@ -188,5 +211,12 @@ class DiskProtocol(Protocol):
         ...
 
     def model_dump(self) -> tuple[str, dict[str, Any]]:
-        """Return the model name and model state."""
+        """Return the model name and model state.
+
+        This method returns a tuple containing the model name and a dictionary
+        representing the model state.
+
+        Returns:
+            (model name, model state) tuple
+        """
         ...

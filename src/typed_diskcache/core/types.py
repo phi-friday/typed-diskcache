@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import Annotated, Any, Generic, Literal, NamedTuple, final
 
 from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import LiteralString, TypeVar, override
+from typing_extensions import LiteralString, TypedDict, TypeVar, override
 
 if sys.version_info >= (3, 11):
     from enum import IntEnum, StrEnum
@@ -27,10 +27,15 @@ __all__ = [
     "MetadataKey",
     "Stats",
     "FilterMethod",
-    "FilterMethodLiteral",
     "QueueSide",
-    "QueueSideLiteral",
+    "SQLiteAutoVacuum",
+    "SQLiteJournalMode",
+    "SQLiteSynchronous",
+    "SettingsKwargs",
     "Container",
+    "EvictionPolicyLiteral",
+    "FilterMethodLiteral",
+    "QueueSideLiteral",
 ]
 
 _T = TypeVar("_T", infer_variance=True)
@@ -88,6 +93,11 @@ class EvictionPolicy(StrEnum):
     LEAST_FREQUENTLY_USED = "least-frequently-used"
 
 
+EvictionPolicyLiteral = Literal[
+    "none", "least-recently-stored", "least-recently-used", "least-frequently-used"
+]
+
+
 class CacheMode(IntEnum):
     """DiskCache value modes."""
 
@@ -122,6 +132,26 @@ class Stats(NamedTuple):
 
     hits: int
     misses: int
+
+
+SQLiteAutoVacuum = Literal[0, "NONE", 1, "FULL", 2, "INCREMENTAL"]
+SQLiteJournalMode = Literal["DELETE", "TRUNCATE", "PERSIST", "MEMORY", "WAL", "OFF"]
+SQLiteSynchronous = Literal[0, "OFF", 1, "NORMAL", 2, "FULL", 3, "EXTRA"]
+
+
+class SettingsKwargs(TypedDict, total=False):
+    """DiskCache settings keyword arguments."""
+
+    statistics: bool
+    eviction_policy: EvictionPolicy | EvictionPolicyLiteral
+    size_limit: int
+    cull_limit: int
+    serialized_disk: tuple[str, dict[str, Any]]
+    sqlite_auto_vacuum: SQLiteAutoVacuum
+    sqlite_cache_size: int
+    sqlite_journal_mode: SQLiteJournalMode
+    sqlite_mmap_size: int
+    sqlite_synchronous: SQLiteSynchronous
 
 
 @final

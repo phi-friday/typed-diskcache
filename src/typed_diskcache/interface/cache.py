@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload, runtime_checkable
 
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar, Unpack
 
 if TYPE_CHECKING:
     import warnings
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
         FilterMethod,
         QueueSide,
         QueueSideLiteral,
+        SettingsKwargs,
         Stats,
     )
     from typed_diskcache.database import Connection
@@ -38,10 +39,11 @@ class CacheProtocol(Protocol):
 
     Args:
         directory: directory for cache
-        disk_type: `DiskProtocol` class or callable
+        disk_type: [`DiskProtocol`][typed_diskcache.interface.disk.DiskProtocol]
+            class or callable
         disk_args: keyword arguments for `disk_type`
-        kwargs: additional keyword arguments
-            for `DiskProtocol`, `CacheProtocol` and `Settings`
+        **kwargs: additional keyword arguments for
+            [`Settings`][typed_diskcache.model.Settings].
     """
 
     def __init__(
@@ -49,7 +51,7 @@ class CacheProtocol(Protocol):
         directory: str | PathLike[str] | None = ...,
         disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None = ...,
         disk_args: Mapping[str, Any] | None = ...,
-        **kwargs: Any,
+        **kwargs: Unpack[SettingsKwargs],
     ) -> None: ...
     def __len__(self) -> int: ...
     def __setitem__(self, key: Any, value: Any) -> None: ...
@@ -96,7 +98,9 @@ class CacheProtocol(Protocol):
         self, key: Any, default: Any = ..., *, retry: bool = ...
     ) -> Container[Any]: ...
     def get(self, key: Any, default: Any = ..., *, retry: bool = ...) -> Container[Any]:
-        """Retrieve value from cache. If `key` is missing, return `default`.
+        """Retrieve value from cache.
+
+        If `key` is missing, return container with `default=True`.
 
         Args:
             key: key for item

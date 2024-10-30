@@ -35,7 +35,9 @@ class Disk(DiskProtocol):
     Args:
         directory: directory for cache
         min_file_size: minimum size for file use. Default is 32kb.
-        kwargs: additional keyword arguments
+        **kwargs: additional keyword arguments.
+            These arguments are not used directly in this class,
+            but are added to prevent errors in inherited classes.
     """
 
     def __init__(

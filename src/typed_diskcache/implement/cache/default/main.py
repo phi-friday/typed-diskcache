@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, overload
 
 import sqlalchemy as sa
 from sqlalchemy import orm as sa_orm
-from typing_extensions import TypeAlias, TypeVar, override
+from typing_extensions import TypeAlias, TypeVar, Unpack, override
 
 from typed_diskcache.core.const import ENOVAL
 from typed_diskcache.core.context import context
@@ -23,6 +23,7 @@ from typed_diskcache.core.types import (
     QueueSide,
     QueueSideLiteral,
     SettingsKey,
+    SettingsKwargs,
     Stats,
 )
 from typed_diskcache.database.model import Cache as CacheTable
@@ -70,11 +71,12 @@ class Cache(CacheProtocol):
 
     Args:
         directory: directory for cache. Default is `None`.
-        disk_type: `DiskProtocol` class or callable. Default is `None`.
+        disk_type: [`DiskProtocol`][typed_diskcache.interface.disk.DiskProtocol]
+            class or callable. Default is `None`.
         disk_args: keyword arguments for `disk_type`. Default is `None`.
         timeout: connection timeout. Default is 60 seconds.
-        kwargs: additional keyword arguments
-            for `DiskProtocol`, `CacheProtocol` and `Settings`
+        **kwargs: additional keyword arguments for
+            [`Settings`][typed_diskcache.model.Settings].
     """
 
     __slots__ = ("_directory", "_disk", "_conn", "_settings", "_page_size")
@@ -85,7 +87,7 @@ class Cache(CacheProtocol):
         disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None = None,
         disk_args: Mapping[str, Any] | None = None,
         timeout: float = 60,
-        **kwargs: Any,
+        **kwargs: Unpack[SettingsKwargs],
     ) -> None:
         if directory is None:
             directory = tempfile.mkdtemp(prefix="typed-diskcache-")
