@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from typing import Any, Generic, Literal, NamedTuple, final
+from typing import Annotated, Any, Generic, Literal, NamedTuple, final
 
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import LiteralString, TypeVar, override
 
 if sys.version_info >= (3, 11):
@@ -34,15 +34,8 @@ __all__ = [
 ]
 
 _T = TypeVar("_T", infer_variance=True)
-_T2 = TypeVar("_T2", infer_variance=True)
 _LiteralT = TypeVar("_LiteralT", bound=LiteralString, infer_variance=True)
 _UTC = timezone(timedelta(0))
-
-_DATACLASS_ARGS: dict[str, Any] = {"frozen": True}
-if sys.version_info >= (3, 10):
-    _DATACLASS_ARGS["kw_only"] = _DATACLASS_ARGS["match_args"] = _DATACLASS_ARGS[
-        "slots"
-    ] = True
 
 
 class Constant(tuple[_LiteralT], Generic[_LiteralT]):
@@ -132,11 +125,14 @@ class Stats(NamedTuple):
 
 
 @final
-@dataclass(**_DATACLASS_ARGS)
-class Container(Generic[_T]):
+class Container(BaseModel, Generic[_T]):
     """DiskCache value container."""
 
-    value: _T = field(repr=False)
+    model_config = ConfigDict(frozen=True)
+
+    key: Annotated[Any, Field(repr=False)] = None
+    """The key associated with the value."""
+    value: Annotated[_T, Field(repr=False)]
     """The value to store."""
     default: bool
     """Whether the value is the default value."""
@@ -144,8 +140,6 @@ class Container(Generic[_T]):
     """The time in seconds since the epoch when the value expires."""
     tags: frozenset[str] | None = None
     """The tags associated with the value."""
-    key: Any = field(default=None, repr=False)
-    """The key associated with the value."""
 
     @cached_property
     def expire_datetime(self) -> datetime | None:
@@ -153,6 +147,3 @@ class Container(Generic[_T]):
         if self.expire_time is not None:
             return datetime.fromtimestamp(self.expire_time, tz=_UTC)
         return None
-
-    def __getitem__(self, key: type[_T2]) -> Container[_T2]:
-        return self  # pyright: ignore[reportReturnType]
