@@ -85,6 +85,7 @@ plugins:
             extensions:
               - griffe_pydantic:
                   schema: true
+              - griffe_inherited_docstrings
             # general
             allow_inspection: true
             show_bases: true
