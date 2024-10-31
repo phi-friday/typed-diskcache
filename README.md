@@ -13,7 +13,9 @@ $ pip install "typed-diskcache[asyncio]"
 ```
 
 ## why use `typed-diskcache`
-While `python-diskcache` is a very nice library, it has two shortcomings.
+While [`python-diskcache`](https://github.com/grantjenks/python-diskcache) is a very nice library,
+it has two shortcomings.
+
 1. it doesn't support type hints.
 2. does not support asynchronous syntax.
 

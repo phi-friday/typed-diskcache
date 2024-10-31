@@ -5,15 +5,13 @@ repo_name: phi-friday/typed-diskcache
 docs_dir: src/docs
 watch:
   - src/typed_diskcache
+  - README.md
 nav:
   - README: index.md
   - LICENSES:
       - LICENSE: licenses/license.md
       - python-diskcache: licenses/python-diskcache.md
   - API:
-      - Types:
-          - Types: api/types/types.md
-          - Models: api/types/models.md
       - Cache:
           - Cache: api/cache/cache.md
           - FanoutCache: api/cache/fanout.md
@@ -29,6 +27,10 @@ nav:
       - Utils:
           - Deque: api/utils/deque.md
           - Memoize: api/utils/memo.md
+      - Types:
+          - Types: api/types/types.md
+          - Models: api/types/models.md
+          - Exception: api/types/exception.md
 theme:
   name: material
   icon:
@@ -59,7 +61,8 @@ theme:
     - content.code.copy
 markdown_extensions:
   - pymdownx.snippets
-  - pymdownx.tasklist
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.highlight:
       linenums: true
       anchor_linenums: true
