@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Generic, SupportsIndex
 from typing_extensions import Self, TypeVar, Unpack, override
 
 from typed_diskcache import Cache
+from typed_diskcache import exception as te
 from typed_diskcache.core.context import context
 from typed_diskcache.core.types import EvictionPolicy, SettingsKwargs
 from typed_diskcache.database.connect import transact
@@ -281,14 +282,14 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 continue
             if index > stop:
                 error_msg = f"{value!r} is not in deque"
-                raise ValueError(error_msg)
+                raise te.TypedDiskcacheValueError(error_msg)
             with suppress(KeyError):
                 container = self.cache[key]
                 if value == container.value:
                     return index
 
         error_msg = f"{value!r} is not in deque"
-        raise ValueError(error_msg)
+        raise te.TypedDiskcacheValueError(error_msg)
 
     @override
     def pop(self) -> _T:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -317,7 +318,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         container = self.cache.pull(side="back", retry=True)
         if container.default:
-            raise IndexError("pop from an empty deque")
+            raise te.TypedDiskcacheIndexError("pop from an empty deque")
         return container.value
 
     def popleft(self) -> _T:
@@ -346,7 +347,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         container = self.cache.pull(side="front", retry=True)
         if container.default:
-            raise IndexError("pop from an empty deque")
+            raise te.TypedDiskcacheIndexError("pop from an empty deque")
         return container.value
 
     @override
@@ -720,17 +721,17 @@ def _index_deque(
 
     if index >= 0:
         if index > size:
-            raise IndexError("index out of range")
+            raise te.TypedDiskcacheIndexError("index out of range")
 
         for key in cache.iterkeys():
             if index == 0:
                 with suppress(KeyError):
                     return func(key)
             index -= 1
-        raise IndexError("index out of range")
+        raise te.TypedDiskcacheIndexError("index out of range")
 
     if index < -size:
-        raise IndexError("index out of range")
+        raise te.TypedDiskcacheIndexError("index out of range")
 
     index += 1
     for key in cache.iterkeys(reverse=True):
@@ -739,7 +740,7 @@ def _index_deque(
                 return func(key)
         index += 1
 
-    raise IndexError("index out of range")
+    raise te.TypedDiskcacheIndexError("index out of range")
 
 
 def _get_item(cache: Cache, key: Any) -> Any:

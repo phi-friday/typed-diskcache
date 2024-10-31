@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm as sa_orm
 from typing_extensions import TypeAlias, TypeVar, Unpack, override
 
+from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
 from typed_diskcache.core.context import context
 from typed_diskcache.core.types import (
@@ -126,7 +127,7 @@ class Cache(CacheProtocol):
     def __getitem__(self, key: Any) -> Container[Any]:
         value = self.get(key, default=ENOVAL, retry=True)
         if value.value is ENOVAL:
-            raise KeyError(key)
+            raise te.TypedDiskcacheKeyError(key)
         return value
 
     @context("Cache.contains")
@@ -151,7 +152,7 @@ class Cache(CacheProtocol):
     def __delitem__(self, key: Any) -> None:
         result = self.delete(key, retry=False)
         if not result:
-            raise KeyError(key)
+            raise te.TypedDiskcacheKeyError(key)
 
     def __del__(self) -> None:
         with suppress(BaseException):
@@ -1145,7 +1146,7 @@ class Cache(CacheProtocol):
             if row is None:
                 if default is None:
                     logger.debug("Key `%s` not found", key)
-                    raise KeyError(key)
+                    raise te.TypedDiskcacheKeyError(key)
 
                 logger.debug("Key `%s` not found, use default `%d`", key, default)
                 value = default + delta
@@ -1170,7 +1171,7 @@ class Cache(CacheProtocol):
             if row.expire_time is not None and row.expire_time < now:
                 if default is None:
                     logger.debug("Key `%s` expired", key)
-                    raise KeyError(key)
+                    raise te.TypedDiskcacheKeyError(key)
 
                 logger.debug("Key `%s` not found, use default `%d`", key, default)
                 value = default + delta
@@ -1246,7 +1247,7 @@ class Cache(CacheProtocol):
             if row is None:
                 if default is None:
                     logger.debug("Key `%s` not found", key)
-                    raise KeyError(key)
+                    raise te.TypedDiskcacheKeyError(key)
 
                 logger.debug("Key `%s` not found, use default `%d`", key, default)
                 value = default + delta
@@ -1271,7 +1272,7 @@ class Cache(CacheProtocol):
             if row.expire_time is not None and row.expire_time < now:
                 if default is None:
                     logger.debug("Key `%s` expired", key)
-                    raise KeyError(key)
+                    raise te.TypedDiskcacheKeyError(key)
 
                 logger.debug("Key `%s` not found, use default `%d`", key, default)
                 value = default + delta

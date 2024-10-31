@@ -164,7 +164,7 @@ def ensure_sqlite_engine(
         return ensure_sqlite_engine(connectable_or_url)
 
     error_msg = f"invalid connectable type: {type(connectable_or_url).__name__}"
-    raise te.FernetSecretsTypeError(error_msg)
+    raise te.TypedDiskcacheTypeError(error_msg)
 
 
 def ensure_sqlite_sync_engine(
@@ -199,7 +199,7 @@ def ensure_sqlite_sync_engine(
         return ensure_sqlite_sync_engine(bind)
 
     error_msg = f"invalid sync connectable type: {type(connectable_or_url).__name__}"
-    raise te.FernetSecretsTypeError(error_msg)
+    raise te.TypedDiskcacheTypeError(error_msg)
 
 
 def ensure_sqlite_async_engine(

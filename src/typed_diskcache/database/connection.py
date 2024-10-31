@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session, async_sessionmaker
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from typed_diskcache import exception as te
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
@@ -213,7 +214,7 @@ class Connection:
 class Eviction:
     def __init__(self, conn: Connection) -> None:
         if conn._settings is None:  # noqa: SLF001
-            raise ValueError("settings is not set")
+            raise te.TypedDiskcacheValueError("settings is not set")
 
         self._conn = conn
         self._policy = conn._settings.eviction_policy  # noqa: SLF001

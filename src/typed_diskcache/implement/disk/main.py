@@ -266,7 +266,7 @@ class Disk(DiskProtocol):
                 return cloudpickle.load(reader)
 
         error_msg = f"Incorrect mode `{mode}`"
-        raise ValueError(error_msg)
+        raise te.TypedDiskcacheValueError(error_msg)
 
     @context
     @override
@@ -307,7 +307,7 @@ class Disk(DiskProtocol):
                 return cloudpickle.loads(await reader.read())
 
         error_msg = f"Incorrect mode `{mode}`"
-        raise ValueError(error_msg)
+        raise te.TypedDiskcacheValueError(error_msg)
 
     @context
     @override

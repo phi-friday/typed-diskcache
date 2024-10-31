@@ -624,7 +624,9 @@ class FanoutCache(CacheProtocol):
         tags: str | Iterable[str] | None = None,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support push operation"
+        )
 
     @override
     async def apush(
@@ -637,7 +639,9 @@ class FanoutCache(CacheProtocol):
         tags: str | Iterable[str] | None = None,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support push operation"
+        )
 
     @override
     def pull(
@@ -648,7 +652,9 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.FRONT,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support pull operation"
+        )
 
     @override
     async def apull(
@@ -659,7 +665,9 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.FRONT,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support pull operation"
+        )
 
     @override
     def peek(
@@ -670,7 +678,9 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.BACK,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support peek operation"
+        )
 
     @override
     async def apeek(
@@ -681,15 +691,21 @@ class FanoutCache(CacheProtocol):
         side: QueueSideLiteral | QueueSide = QueueSide.BACK,
         retry: bool = False,
     ) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support peek operation"
+        )
 
     @override
     def peekitem(self, *, last: bool = True, retry: bool = False) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support peekitem operation"
+        )
 
     @override
     async def apeekitem(self, *, last: bool = True, retry: bool = False) -> NoReturn:
-        raise te.TypedDiskcacheNotImplementedError
+        raise te.TypedDiskcacheNotImplementedError(
+            "FanoutCache does not support peekitem operation"
+        )
 
     @override
     def update_settings(self, settings: Settings) -> None:

@@ -5,6 +5,7 @@ __all__ = [
     "TypedDiskcacheKeyError",
     "TypedDiskcacheValueError",
     "TypedDiskcacheTypeError",
+    "TypedDiskcacheIndexError",
     "TypedDiskcacheNotImplementedError",
     "TypedDiskcacheOSError",
     "TypedDiskcacheFileNotFoundError",
@@ -30,6 +31,10 @@ class TypedDiskcacheValueError(ValueError, TypedDiskcacheError):
 
 class TypedDiskcacheTypeError(TypeError, TypedDiskcacheError):
     """typed-diskcache type error"""
+
+
+class TypedDiskcacheIndexError(IndexError, TypedDiskcacheError):
+    """typed-diskcache index error"""
 
 
 class TypedDiskcacheNotImplementedError(NotImplementedError, TypedDiskcacheError):
