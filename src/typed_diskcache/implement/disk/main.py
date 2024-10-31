@@ -369,8 +369,3 @@ class Disk(DiskProtocol):
             "directory": str(self._directory),
             "min_file_size": self.min_file_size,
         }
-
-
-if not isinstance(Disk, DiskProtocol):
-    error_msg = "Disk must conform to DiskProtocol"
-    raise te.TypedDiskcacheTypeError(error_msg)
