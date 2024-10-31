@@ -3,6 +3,8 @@ site_url: https://typed-diskcache.readthedocs.io
 repo_url: https://github.com/phi-friday/typed-diskcache
 repo_name: phi-friday/typed-diskcache
 docs_dir: src/docs
+site_author: Choi Min-yeong
+copyright: 2024, Choi Min-yeong
 watch:
   - src/typed_diskcache
   - README.md
