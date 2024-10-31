@@ -92,7 +92,7 @@ class Version(Base):
             .where(Version.id == (self.id or 1))
         )
         session.execute(stmt)
-        logger.info("set revision id: `%s`", self.revision)
+        logger.debug("set revision id: `%s`", self.revision)
 
     async def aset(self, session: AsyncSession | AsyncConnection) -> None:
         """set revision id"""
@@ -102,7 +102,7 @@ class Version(Base):
             .where(Version.id == (self.id or 1))
         )
         await session.execute(stmt)
-        logger.info("set revision id: `%s`", self.revision)
+        logger.debug("set revision id: `%s`", self.revision)
 
     @classmethod
     def delete(
@@ -110,7 +110,7 @@ class Version(Base):
     ) -> None:
         """delete version table"""
         session.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
-        logger.info("delete version id: `%s`", version_id or 1)
+        logger.debug("delete version id: `%s`", version_id or 1)
 
     @classmethod
     async def adelete(
@@ -118,7 +118,7 @@ class Version(Base):
     ) -> None:
         """delete version table"""
         await session.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
-        logger.info("delete version id: `%s`", version_id or 1)
+        logger.debug("delete version id: `%s`", version_id or 1)
 
 
 class Settings(Base, Generic[_T]):

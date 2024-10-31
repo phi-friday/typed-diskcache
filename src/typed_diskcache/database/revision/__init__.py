@@ -46,13 +46,13 @@ class Revision(NamedTuple):
             split = value.split("_", 1)
             return cls(int(split[0]), split[1], value)
 
-        logger.info("searching revision file: `%s`", value)
+        logger.debug("searching revision file: `%s`", value)
         with suppress(StopIteration):
             file = next(Path(__file__).parent.glob(f"*{value}.py"))
             if not _REVISION.match(file.stem):
                 error_msg = f"revision `{value}` not found"
                 raise te.TypedDiskcacheFileNotFoundError(error_msg)
-            logger.info(
+            logger.debug(
                 "Found revision file: `%s`", file.relative_to(Path(__file__).parent)
             )
             split = file.stem.split("_", 1)
@@ -75,14 +75,14 @@ def auto(conn: Connection, target_revision: str | int | Revision | None = None) 
             Defaults to None.
     """
     current = _parse_revision(conn)
-    logger.info("current revision is `%s`", current)
+    logger.debug("current revision is `%s`", current)
     if target_revision is None:
         target_revision = Revision(REVISION_MAXIMA)
     elif isinstance(target_revision, (str, int)):
         target_revision = Revision.parse(target_revision)
-    logger.info("target revision is `%s`", target_revision)
+    logger.debug("target revision is `%s`", target_revision)
     if current is not None and target_revision.num == current.num:
-        logger.info("current revision is up to date")
+        logger.debug("current revision is up to date")
         return
     revisions, target_revision = _prepare_revisions(target_revision)
 
@@ -98,7 +98,7 @@ def auto(conn: Connection, target_revision: str | int | Revision | None = None) 
                 transact.commit()
                 conn.commit()
                 return
-    logger.info("current revision is up to date")
+    logger.debug("current revision is up to date")
 
 
 def upgrade(conn: Connection, target_revision: str | int | Revision) -> None:
@@ -117,7 +117,7 @@ def upgrade(conn: Connection, target_revision: str | int | Revision) -> None:
             )
             raise te.TypedDiskcacheValueError(error_msg)
         if target_revision.num == current.num:
-            logger.info("current revision is up to date")
+            logger.debug("current revision is up to date")
             return
 
     with connect_transact(conn):
@@ -143,7 +143,7 @@ def downgrade(conn: Connection, target_revision: str | int | Revision) -> None:
             )
             raise te.TypedDiskcacheValueError(error_msg)
         if target_revision.num == current.num:
-            logger.info("current revision is up to date")
+            logger.debug("current revision is up to date")
             return
 
     with connect_transact(conn):
@@ -167,7 +167,7 @@ def _upgrade_process(
                 continue
             module = import_module(f"typed_diskcache.database.revision.{file.stem}")
             next_revision = Revision(num, fullname=file.stem)
-            logger.info("upgrade revision from `%s` to `%s`", current, next_revision)
+            logger.debug("upgrade revision from `%s` to `%s`", current, next_revision)
             version = module.upgrade(conn)
             current = next_revision
             if version is None:
@@ -193,7 +193,7 @@ def _downgrade_process(
                 continue
             module = import_module(f"typed_diskcache.database.revision.{file.stem}")
             next_revision = Revision(num, fullname=file.stem)
-            logger.info("downgrade revision from `%s` to `%s`", current, next_revision)
+            logger.debug("downgrade revision from `%s` to `%s`", current, next_revision)
             version = module.downgrade(conn)
             current = next_revision
             if version is None:
