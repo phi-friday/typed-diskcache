@@ -39,9 +39,9 @@ I haven't tested it yet, so I can't guarantee it will work.
 I'll be adding more tests over time.
 
 ## TODO
-- [ ] docstring
-> There are still some, but most of them copied `python-diskcache`.
-- [ ] docs
+- [x] docstring
+> Most of it is a copy of `python-diskcache`, but it's still pretty clean.
+- [X] docs
 - [ ] tests
 - [ ] performance
 
