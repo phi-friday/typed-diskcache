@@ -75,6 +75,10 @@ class Memoized(Generic[_P, _T]):
             )
         return value
 
+    @property
+    def __wrapped__(self) -> Callable[_P, _T]:
+        return self._func
+
     def cache_key(self, *args: _P.args, **kwargs: _P.kwargs) -> tuple[Any, ...]:
         return args_to_key(
             base=self._base,
@@ -124,6 +128,11 @@ class AsyncMemoized(Memoized[_P, Coroutine[Any, Any, _T]], Generic[_P, _T]):
                 key, value, expire=self._expire, tags=self._tags, retry=True
             )
         return value
+
+    @property
+    @override
+    def __wrapped__(self) -> Callable[_P, Coroutine[Any, Any, _T]]:
+        return self._func
 
 
 class Timer(Generic[_P, _T]):
@@ -328,14 +337,13 @@ def memoize(
     automatically.
 
     When expire is set to zero, function results will not be set in the
-    cache. Cache lookups still occur, however. Read
-    :doc:`case-study-landing-page-caching` for example usage.
+    cache. Cache lookups still occur, however.
 
     If typed is set to True, function arguments of different types will be
     cached separately. For example, f(3) and f(3.0) will be treated as
     distinct calls with distinct results.
 
-    The original underlying function is accessible through the __wrapped__
+    The original underlying function is accessible through the `__wrapped__`
     attribute. This is useful for introspection, for bypassing the cache,
     or for rewrapping the function with a different cache.
 

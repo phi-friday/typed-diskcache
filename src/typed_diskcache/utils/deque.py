@@ -7,11 +7,11 @@ from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, Any, Generic, SupportsIndex
 
-from typing_extensions import Self, TypeVar, override
+from typing_extensions import Self, TypeVar, Unpack, override
 
 from typed_diskcache import Cache
 from typed_diskcache.core.context import context
-from typed_diskcache.core.types import EvictionPolicy
+from typed_diskcache.core.types import EvictionPolicy, SettingsKwargs
 from typed_diskcache.database.connect import transact
 from typed_diskcache.log import get_logger
 
@@ -34,13 +34,11 @@ class Deque(MutableSequence[_T], Generic[_T]):
     where items are stored.
 
     Args:
-        values: values to initialize deque.
-            Defaults to None.
-        maxlen: maximum length of deque.
-            Defaults to None(infinite).
-        directory: directory path to store items.
-            Defaults to None.
-        **kwargs: additional cache options.
+        values: Values to initialize deque. Defaults to None.
+        maxlen: Maximum length of deque. Defaults to None (infinite).
+        directory: Directory path to store items. Defaults to None.
+        **kwargs: additional keyword arguments for
+            [`Settings`][typed_diskcache.model.Settings].
 
     Examples:
         ```python
@@ -76,7 +74,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         maxlen: float | None = None,
         *,
         directory: str | PathLike[str] | None = None,
-        **kwargs: Any,
+        **kwargs: Unpack[SettingsKwargs],
     ) -> None:
         eviction_policy = kwargs.pop("eviction_policy", EvictionPolicy.NONE)
         if eviction_policy != EvictionPolicy.NONE:
@@ -105,7 +103,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         Pops items from left while length greater than max.
 
         Args:
-            value: max length
+            value: Max length.
 
         Examples:
             ```python
@@ -132,7 +130,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Add `value` to back of deque.
 
         Args:
-            value: value to add to back of deque
+            value: Value to add to back of deque.
 
         Examples:
             ```python
@@ -159,7 +157,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Add `value` to front of deque.
 
         Args:
-            value: value to add to front of deque
+            value: Value to add to front of deque.
 
         Examples:
             ```python
@@ -193,10 +191,10 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Return number of occurrences of `value` in deque.
 
         Args:
-            value: value to count in deque
+            value: Value to count in deque.
 
         Returns:
-            count of items equal to value in deque
+            Count of items equal to value in deque.
 
         Examples:
             ```python
@@ -222,17 +220,29 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Extend back side of deque with values from `iterable`.
 
         Args:
-            values: iterable of values to append to deque
+            values: Iterable of values to append to deque.
+
+        Examples:
+            ```python
+            from typed_diskcache.utils.deque import Deque
+
+
+            def main() -> None:
+                deque = Deque()
+                deque.extend("abc")
+                print(list(deque))
+                # ['a', 'b', 'c']
+            ```
         """
         for value in values:
             self.append(value)
 
     @context("Deque.extendleft", override=True)
     def extendleft(self, values: Iterable[_T]) -> None:
-        """Extend front side of deque with value from `iterable`.
+        """Extend front side of deque with values from `iterable`.
 
         Args:
-            values: iterable of values to append to deque
+            values: Iterable of values to append to deque.
 
         Examples:
             ```python
@@ -284,10 +294,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
     def pop(self) -> _T:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Remove and return value at back of deque.
 
-        If deque is empty then raise IndexError.
-
         Returns:
-            value at back of deque
+            Value at back of deque.
 
         Examples:
             ```python
@@ -316,7 +324,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Remove and return value at front of deque.
 
         Returns:
-            value at front of deque
+            Value at front of deque.
 
         Examples:
             ```python
@@ -346,7 +354,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Remove first occurrence of `value` in deque.
 
         Args:
-            value: value to remove
+            value: Value to remove.
 
         Examples:
             ```python
@@ -381,8 +389,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         If steps is negative then rotate left.
 
         Args:
-            steps: number of steps to rotate.
-                Defaults to 1.
+            steps: Number of steps to rotate. Defaults to 1.
 
         Examples:
             ```python
