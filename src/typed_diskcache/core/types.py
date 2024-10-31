@@ -156,7 +156,47 @@ class SettingsKwargs(TypedDict, total=False):
 
 @final
 class Container(BaseModel, Generic[_T]):
-    """DiskCache value container."""
+    """DiskCache value container.
+
+    Examples:
+        !!! note
+            Pattern matching is available in Python 3.10+.
+
+        ```python
+        from datetime import datetime, timezone
+        from typing import Any
+
+        from typed_diskcache import Container
+
+
+        def process_container(container: Container[Any]) -> str:
+            match container:
+                case Container(key=key, value=value, default=True):
+                    return f"Default value: {value} for key: {key}"
+                case Container(key=key, value=value, expire_time=expire_time) if (
+                    expire_time and expire_time < datetime.now(timezone.utc).timestamp()
+                ):
+                    return f"Expired value: {value} for key: {key}"
+                case Container(key=key, value=value, tags=tags) if tags:
+                    return f"Tagged value: {value} for key: {key} with tags: {tags}"
+                case Container(key=key, value=value):
+                    return f"Value: {value} for key: {key}"
+                case _:
+                    return "Unknown container state"
+
+
+        container = Container(
+            key="example",
+            value="data",
+            default=False,
+            expire_time=None,
+            tags=frozenset(["tag1"]),
+        )
+        result = process_container(container)
+        print(result)
+        # Tagged value: data for key: example with tags: frozenset({'tag1'})
+        ```
+    """
 
     model_config = ConfigDict(frozen=True)
 
