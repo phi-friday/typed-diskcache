@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typed_diskcache.core.types import Container
 from typed_diskcache.implement import (
     AsyncLock,
     AsyncRLock,
@@ -22,6 +23,7 @@ __all__ = [
     "AsyncRLock",
     "SyncSemaphore",
     "AsyncSemaphore",
+    "Container",
 ]
 
 __version__: str
