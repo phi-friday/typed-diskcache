@@ -5,7 +5,7 @@ import time
 import warnings
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
@@ -22,6 +22,7 @@ from typed_diskcache.core.types import (
     CacheMode,
     Container,
     FilterMethod,
+    FilterMethodLiteral,
     MetadataKey,
     QueueSide,
     QueueSideLiteral,
@@ -595,7 +596,7 @@ async def async_build_cache_instance(  # noqa: PLR0913
 
 
 def prepare_filter_stmt(
-    *, method: Literal["and", "or"] | FilterMethod
+    *, method: FilterMethodLiteral | FilterMethod
 ) -> sa.Select[tuple[int, bytes, bool]]:
     method = FilterMethod(method)
     stmt = (
@@ -640,7 +641,7 @@ async def async_find_max_id(conn: Connection) -> int | None:
 
 
 def prepare_evict_stmt(
-    method: Literal["and", "or"] | FilterMethod,
+    method: FilterMethodLiteral | FilterMethod,
 ) -> sa.Select[tuple[int, str | None]]:
     method = FilterMethod(method)
 

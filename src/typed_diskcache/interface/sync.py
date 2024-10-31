@@ -188,7 +188,8 @@ class AsyncLockProtocol(Protocol):
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 
-    Asynchronous version of `SyncLock`.
+    Asynchronous version of
+    [`SyncLockProtocol`][typed_diskcache.interface.sync.SyncLockProtocol].
 
     Args:
         cache: Cache to use for lock.
@@ -269,7 +270,8 @@ class AsyncSemaphoreProtocol(Protocol):
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 
-    Asynchronous version of `SyncSemaphore`.
+    Asynchronous version of
+    [`SyncSemaphoreProtocol`][typed_diskcache.interface.sync.SyncSemaphoreProtocol].
 
     Args:
         cache: Cache to use for semaphore.

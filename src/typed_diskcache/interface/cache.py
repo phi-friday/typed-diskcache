@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, overload, runtime_checkable
 
 from typing_extensions import TypeVar, Unpack
 
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from typed_diskcache.core.types import (
         Container,
         FilterMethod,
+        FilterMethodLiteral,
         QueueSide,
         QueueSideLiteral,
         SettingsKwargs,
@@ -100,15 +101,15 @@ class CacheProtocol(Protocol):
     def get(self, key: Any, default: Any = ..., *, retry: bool = ...) -> Container[Any]:
         """Retrieve value from cache.
 
-        If `key` is missing, return container with `default=True`.
+        If `key` is missing, return container with `default`.
 
         Args:
-            key: key for item
-            default: value to return if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            default: Value to return if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if key not found
+            Container with cached value or default if key not found.
         """
         ...
 
@@ -123,17 +124,17 @@ class CacheProtocol(Protocol):
     async def aget(
         self, key: Any, default: Any = ..., *, retry: bool = ...
     ) -> Container[Any]:
-        """Retrieve value from cache. If `key` is missing, return `default`.
+        """Asynchronously retrieve value from cache.
 
-        Asynchronous version of `get`.
+        If `key` is missing, return container with `default`.
 
         Args:
-            key: key for item
-            default: value to return if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            default: Value to return if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if key not found
+            Container with cached value or default if key not found.
         """
         ...
 
@@ -146,17 +147,17 @@ class CacheProtocol(Protocol):
         tags: str | Iterable[str] | None = ...,
         retry: bool = ...,
     ) -> bool:
-        """Set `key` and `value` item in cache.
+        """Set `key` and `value` in cache.
 
         Args:
-            key: key for item
-            value: value for item
-            expire: seconds until item expires
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            key: Key for item.
+            value: Value for item.
+            expire: Seconds until item expires.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was set
+            True if item was set.
         """
         ...
 
@@ -169,19 +170,17 @@ class CacheProtocol(Protocol):
         tags: str | Iterable[str] | None = ...,
         retry: bool = ...,
     ) -> bool:
-        """Set `key` and `value` item in cache.
-
-        Asynchronous version of `set`.
+        """Asynchronously set `key` and `value` in cache.
 
         Args:
-            key: key for item
-            value: value for item
-            expire: seconds until item expires
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            key: Key for item.
+            value: Value for item.
+            expire: Seconds until item expires.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was set
+            True if item was set.
         """
         ...
 
@@ -191,65 +190,59 @@ class CacheProtocol(Protocol):
         Missing keys are ignored.
 
         Args:
-            key: key matching item
-            retry: retry if database timeout occurs
+            key: Key matching item.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was deleted
+            True if item was deleted.
         """
         ...
 
     async def adelete(self, key: Any, *, retry: bool = ...) -> bool:
-        """Delete corresponding item for `key` from cache.
-
-        Asynchronous version of `delete`.
+        """Asynchronously delete corresponding item for `key` from cache.
 
         Missing keys are ignored.
 
         Args:
-            key: key matching item
-            retry: retry if database timeout occurs
+            key: Key matching item.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was deleted
+            True if item was deleted.
         """
         ...
 
     def clear(self, *, retry: bool = ...) -> int:
         """Remove all items from cache.
 
-        Removing items is an iterative process. In each iteration, a subset of
-        items is removed. Concurrent writes may occur between iterations.
+        Removing items is iterative. Each iteration removes a subset of items.
+        Concurrent writes may occur.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
-        `args` attribute will be the number of items removed before the
-        exception occurred.
+        If a [`TimeoutError`][] occurs, the first element of the exception's `args`
+        attribute will be the number of items removed before the exception.
 
         Args:
-            retry: retry if database timeout occurs
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of rows removed
+            Count of rows removed.
         """
         ...
 
     async def aclear(self, *, retry: bool = ...) -> int:
-        """Remove all items from cache.
+        """Asynchronously remove all items from cache.
 
-        Asynchronous version of `clear`.
+        Removing items is iterative. Each iteration removes a subset of items.
+        Concurrent writes may occur.
 
-        Removing items is an iterative process. In each iteration, a subset of
-        items is removed. Concurrent writes may occur between iterations.
-
-        If a :exc:`Timeout` occurs, the first element of the exception's
-        `args` attribute will be the number of items removed before the
-        exception occurred.
+        If a [`TimeoutError`][] occurs, the first element of the exception's `args`
+        attribute will be the number of items removed before the exception.
 
         Args:
-            retry: retry if database timeout occurs
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of rows removed
+            Count of rows removed.
         """
         ...
 
@@ -257,8 +250,8 @@ class CacheProtocol(Protocol):
         """Return cache statistics hits and misses.
 
         Args:
-            enable: enable collecting statistics
-            reset: reset hits and misses to 0
+            enable: Enable collecting statistics.
+            reset: Reset hits and misses to 0.
 
         Returns:
             (hits, misses)
@@ -266,13 +259,11 @@ class CacheProtocol(Protocol):
         ...
 
     async def astats(self, *, enable: bool = ..., reset: bool = ...) -> Stats:
-        """Return cache statistics hits and misses.
-
-        Asynchronous version of `stats`.
+        """Asynchronously return cache statistics hits and misses.
 
         Args:
-            enable: enable collecting statistics
-            reset: reset hits and misses to 0
+            enable: Enable collecting statistics.
+            reset: Reset hits and misses to 0.
 
         Returns:
             (hits, misses)
@@ -283,17 +274,15 @@ class CacheProtocol(Protocol):
         """Return estimated total size of cache on disk.
 
         Returns:
-            size in bytes
+            Size in bytes.
         """
         ...
 
     async def avolume(self) -> int:
-        """Return estimated total size of cache on disk.
-
-        Asynchronous version of `volume`.
+        """Asynchronously return estimated total size of cache on disk.
 
         Returns:
-            size in bytes
+            Size in bytes.
         """
         ...
 
@@ -302,36 +291,34 @@ class CacheProtocol(Protocol):
         ...
 
     async def aclose(self) -> None:
-        """Close database connection."""
+        """Asynchronously close database connection."""
         ...
 
     def touch(self, key: Any, *, expire: float | None = ..., retry: bool = ...) -> bool:
         """Touch `key` in cache and update `expire` time.
 
         Args:
-            key: key for item
-            expire: seconds until item expires. If None, no expiry.
-            retry: retry if database timeout occurs
+            key: Key for item.
+            expire: Seconds until item expires. If None, no expiry.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if key was touched
+            True if key was touched.
         """
         ...
 
     async def atouch(
         self, key: Any, *, expire: float | None = ..., retry: bool = ...
     ) -> bool:
-        """Touch `key` in cache and update `expire` time.
-
-        Asynchronous version of `touch`.
+        """Asynchronously touch `key` in cache and update `expire` time.
 
         Args:
-            key: key for item
-            expire: seconds until item expires. If None, no expiry.
-            retry: retry if database timeout occurs
+            key: Key for item.
+            expire: Seconds until item expires. If None, no expiry.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if key was touched
+            True if key was touched.
         """
         ...
 
@@ -352,14 +339,14 @@ class CacheProtocol(Protocol):
         will succeed.
 
         Args:
-            key: key for item
-            value: value for item
-            expire: seconds until the key expires. If None, no expiry.
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            key: Key for item.
+            value: Value for item.
+            expire: Seconds until the key expires. If None, no expiry.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was added
+            True if item was added.
         """
         ...
 
@@ -372,9 +359,7 @@ class CacheProtocol(Protocol):
         tags: str | Iterable[str] | None = ...,
         retry: bool = ...,
     ) -> bool:
-        """Add `key` and `value` item to cache.
-
-        Asynchronous version of `add`.
+        """Asynchronously add `key` and `value` item to cache.
 
         Similar to `set`, but only add to cache if key not present.
 
@@ -382,14 +367,14 @@ class CacheProtocol(Protocol):
         will succeed.
 
         Args:
-            key: key for item
-            value: value for item
-            expire: seconds until the key expires. If None, no expiry.
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            key: Key for item.
+            value: Value for item.
+            expire: Seconds until the key expires. If None, no expiry.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            True if item was added
+            True if item was added.
         """
         ...
 
@@ -409,12 +394,12 @@ class CacheProtocol(Protocol):
         Operation is atomic. Concurrent operations will be serialized.
 
         Args:
-            key: key for item
-            default: value to return if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            default: Value to return if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if key not found
+            Container with cached value or default if key not found.
         """
         ...
 
@@ -429,21 +414,20 @@ class CacheProtocol(Protocol):
     async def apop(
         self, key: Any, default: Any = ..., *, retry: bool = ...
     ) -> Container[Any]:
-        """Remove corresponding item for `key` from cache and return value.
-
-        Asynchronous version of `pop`.
+        """
+        Asynchronously remove corresponding item for `key` from cache and return value.
 
         If `key` is missing, return `default`.
 
         Operation is atomic. Concurrent operations will be serialized.
 
         Args:
-            key: key for item
-            default: value to return if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            default: Value to return if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if key not found
+            Container with cached value or default if key not found.
         """
         ...
 
@@ -451,16 +435,16 @@ class CacheProtocol(Protocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = ...,
+        method: FilterMethodLiteral | FilterMethod = ...,
     ) -> Generator[Any, None, None]:
         """Filter by tags.
 
         Args:
-            tags: tags to filter by
-            method: 'and' or 'or' filter method
+            tags: Tags to filter by.
+            method: 'and' or 'or' filter method.
 
         Yields:
-            key of item matching tags
+            Key of item matching tags.
         """
         ...
 
@@ -468,18 +452,16 @@ class CacheProtocol(Protocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = ...,
+        method: FilterMethodLiteral | FilterMethod = ...,
     ) -> AsyncGenerator[Any, None]:
-        """Filter by tags.
-
-        Asynchronous version of `filter`.
+        """Asynchronously filter by tags.
 
         Args:
-            tags: tags to filter by
-            method: 'and' or 'or' filter method
+            tags: Tags to filter by.
+            method: 'and' or 'or' filter method.
 
         Yields:
-            key of item matching tags
+            Key of item matching tags.
         """
         ...
 
@@ -490,27 +472,26 @@ class CacheProtocol(Protocol):
         default: int | None = ...,
         *,
         retry: bool = ...,
-    ) -> int | None:
+    ) -> int:
         """Increment value by delta for item with key.
 
-        If key is missing and default is None then raise KeyError. Else if key
+        If key is missing and default is None then raise [`KeyError`][]. Else if key
         is missing and default is not None then use default for value.
 
         Operation is atomic. All concurrent increment operations will be
         counted individually.
 
         Assumes value may be stored in a SQLite column. Most builds that target
-        machines with 64-bit pointer widths will support 64-bit signed
-        integers.
+        machines with 64-bit pointer widths will support 64-bit signed integers.
 
         Args:
-            key: key for item
-            delta: amount to increment
-            default: value if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            delta: Amount to increment.
+            default: Value if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            new value for item
+            Incremented value or default if key not found.
         """
         ...
 
@@ -521,29 +502,26 @@ class CacheProtocol(Protocol):
         default: int | None = ...,
         *,
         retry: bool = ...,
-    ) -> int | None:
-        """Increment value by delta for item with key.
+    ) -> int:
+        """Async increment value by delta for item with key.
 
-        Asynchronous version of `incr`.
-
-        If key is missing and default is None then raise KeyError. Else if key
+        If key is missing and default is None then raise [`KeyError`]. Else if key
         is missing and default is not None then use default for value.
 
         Operation is atomic. All concurrent increment operations will be
         counted individually.
 
         Assumes value may be stored in a SQLite column. Most builds that target
-        machines with 64-bit pointer widths will support 64-bit signed
-        integers.
+        machines with 64-bit pointer widths will support 64-bit signed integers.
 
         Args:
-            key: key for item
-            delta: amount to increment
-            default: value if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            delta: Amount to increment.
+            default: Value if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            new value for item
+            Incremented value or default if key not found.
         """
         ...
 
@@ -554,10 +532,10 @@ class CacheProtocol(Protocol):
         default: int | None = ...,
         *,
         retry: bool = ...,
-    ) -> int | None:
+    ) -> int:
         """Decrement value by delta for item with key.
 
-        If key is missing and default is None then raise KeyError. Else if key
+        If key is missing and default is None then raise [`KeyError`][]. Else if key
         is missing and default is not None then use default for value.
 
         Operation is atomic. All concurrent decrement operations will be
@@ -567,17 +545,16 @@ class CacheProtocol(Protocol):
         decremented below zero.
 
         Assumes value may be stored in a SQLite column. Most builds that target
-        machines with 64-bit pointer widths will support 64-bit signed
-        integers.
+        machines with 64-bit pointer widths will support 64-bit signed integers.
 
         Args:
-            key: key for item
-            delta: amount to decrement
-            default: value if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            delta: Amount to decrement.
+            default: Value if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            new value for item
+            Decremented value or default if key not found.
         """
         ...
 
@@ -588,12 +565,10 @@ class CacheProtocol(Protocol):
         default: int | None = ...,
         *,
         retry: bool = ...,
-    ) -> int | None:
-        """Decrement value by delta for item with key.
+    ) -> int:
+        """Async decrement value by delta for item with key.
 
-        Asynchronous version of `decr`.
-
-        If key is missing and default is None then raise KeyError. Else if key
+        If key is missing and default is None then raise [`KeyError`][]. Else if key
         is missing and default is not None then use default for value.
 
         Operation is atomic. All concurrent decrement operations will be
@@ -603,17 +578,16 @@ class CacheProtocol(Protocol):
         decremented below zero.
 
         Assumes value may be stored in a SQLite column. Most builds that target
-        machines with 64-bit pointer widths will support 64-bit signed
-        integers.
+        machines with 64-bit pointer widths will support 64-bit signed integers.
 
         Args:
-            key: key for item
-            delta: amount to decrement
-            default: value if key is missing
-            retry: retry if database timeout occurs
+            key: Key for item.
+            delta: Amount to decrement.
+            default: Value if key is missing.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            new value for item
+            Decremented value or default if key not found.
         """
         ...
 
@@ -621,7 +595,7 @@ class CacheProtocol(Protocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = ...,
+        method: FilterMethodLiteral | FilterMethod = ...,
         retry: bool = False,
     ) -> int:
         """Remove items with matching `tag` from cache.
@@ -629,17 +603,17 @@ class CacheProtocol(Protocol):
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            tags: tags identifying items
-            method: 'and' or 'or' filter method
-            retry: retry if database timeout occurs
+            tags: Tags identifying items.
+            method: 'and' or 'or' filter method.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of rows removed
+            Count of rows removed.
         """
         ...
 
@@ -647,27 +621,25 @@ class CacheProtocol(Protocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = ...,
-        retry: bool = ...,
+        method: FilterMethodLiteral | FilterMethod = ...,
+        retry: bool = False,
     ) -> int:
-        """Remove items with matching `tag` from cache.
-
-        Asynchronous version of `evict`.
+        """Async remove items with matching `tag` from cache.
 
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            tags: tags identifying items
-            method: 'and' or 'or' filter method
-            retry: retry if database timeout occurs
+            tags: Tags identifying items.
+            method: 'and' or 'or' filter method.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of rows removed
+            Count of rows removed.
         """
         ...
 
@@ -677,37 +649,35 @@ class CacheProtocol(Protocol):
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            now: current time. If None, use `time.time()`.
-            retry: retry if database timeout occurs
+            now: Current time. If None, use [`time.time()`][time.time].
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of items removed
+            Count of items removed.
         """
         ...
 
     async def aexpire(self, now: float | None = ..., *, retry: bool = ...) -> int:
-        """Remove expired items from cache.
-
-        Asynchronous version of `expire`.
+        """Async remove expired items from cache.
 
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            now: current time. If None, use `time.time()`.
-            retry: retry if database timeout occurs
+            now: Current time. If None, use [`time.time()`][time.time].
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of items removed
+            Count of items removed.
         """
         ...
 
@@ -717,35 +687,33 @@ class CacheProtocol(Protocol):
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            retry: retry if database timeout occurs
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of items removed
+            Count of items removed.
         """
         ...
 
     async def acull(self, *, retry: bool = ...) -> int:
-        """Cull items from cache until volume is less than size limit.
-
-        Asynchronous version of `cull`.
+        """Async cull items from cache until volume is less than size limit.
 
         Removing items is an iterative process. In each iteration, a subset of
         items is removed. Concurrent writes may occur between iterations.
 
-        If a :exc:`Timeout` occurs, the first element of the exception's
+        If a [`TimeoutError`][] occurs, the first element of the exception's
         `args` attribute will be the number of items removed before the
         exception occurred.
 
         Args:
-            retry: retry if database timeout occurs
+            retry: Retry if database timeout occurs.
 
         Returns:
-            count of items removed
+            Count of items removed.
         """
         ...
 
@@ -761,23 +729,22 @@ class CacheProtocol(Protocol):
     ) -> Any:
         """Push `value` onto `side` of queue identified by `prefix` in cache.
 
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         Operation is atomic. Concurrent operations will be serialized.
 
-        See also `pull`.
+        See also [`pull`][typed_diskcache.interface.CacheProtocol.pull].
 
         Args:
-            value: value for item
-            prefix: key prefix. If None, key is integer
-            side: either 'back' or 'front'
-            expire: seconds until the key expires. If None, no expiry.
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            value: Value for item.
+            prefix: Key prefix. If None, key is integer.
+            side: Either 'back' or 'front'.
+            expire: Seconds until the key expires. If None, no expiry.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            key for item in cache
+            Key of the pushed item.
 
         Examples:
             ```python
@@ -810,27 +777,24 @@ class CacheProtocol(Protocol):
         tags: str | Iterable[str] | None = ...,
         retry: bool = ...,
     ) -> Any:
-        """Push `value` onto `side` of queue identified by `prefix` in cache.
+        """Async push `value` onto `side` of queue identified by `prefix` in cache.
 
-        Asynchronous version of `push`.
-
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         Operation is atomic. Concurrent operations will be serialized.
 
-        See also `pull`.
+        See also [`apull`][typed_diskcache.interface.CacheProtocol.apull].
 
         Args:
-            value: value for item
-            prefix: key prefix. If None, key is integer
-            side: either 'back' or 'front'
-            expire: seconds until the key expires. If None, no expiry.
-            tags: texts to associate with key
-            retry: retry if database timeout occurs
+            value: Value for item.
+            prefix: Key prefix. If None, key is integer.
+            side: Either 'back' or 'front'.
+            expire: Seconds until the key expires. If None, no expiry.
+            tags: Tags to associate with key.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            key for item in cache
+            Key of the pushed item.
 
         Examples:
             ```python
@@ -899,23 +863,23 @@ class CacheProtocol(Protocol):
     ) -> Container[Any]:
         """Pull key and value item pair from `side` of queue in cache.
 
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         If queue is empty, return default.
 
         Operation is atomic. Concurrent operations will be serialized.
 
-        See also `push` and `get`.
+        See also [`push`][typed_diskcache.interface.CacheProtocol.push]
+        and [`get`][typed_diskcache.interface.CacheProtocol.get].
 
         Args:
-            prefix: key prefix. If None, key is integer
-            default: value to return if key is missing
-            side: either 'back' or 'front'
-            retry: retry if database timeout occurs
+            prefix: Key prefix. If None, key is integer.
+            default: Value to return if key is missing.
+            side: Either 'back' or 'front'.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if queue is empty
+            Container with cached value or default if queue is empty.
 
         Examples:
             ```python
@@ -992,27 +956,25 @@ class CacheProtocol(Protocol):
         side: QueueSideLiteral | QueueSide = ...,
         retry: bool = ...,
     ) -> Container[Any]:
-        """Pull key and value item pair from `side` of queue in cache.
+        """Async pull key and value item pair from `side` of queue in cache.
 
-        Asynchronous version of `pull`.
-
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         If queue is empty, return default.
 
         Operation is atomic. Concurrent operations will be serialized.
 
-        See also `push` and `get`.
+        See also [`apush`][typed_diskcache.interface.CacheProtocol.apush]
+        and [`aget`][typed_diskcache.interface.CacheProtocol.aget].
 
         Args:
-            prefix: key prefix. If None, key is integer
-            default: value to return if key is missing
-            side: either 'back' or 'front'
-            retry: retry if database timeout occurs
+            prefix: Key prefix. If None, key is integer.
+            default: Value to return if key is missing.
+            side: Either 'back' or 'front'.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if queue is empty
+            Container with cached value or default if queue is empty.
 
         Examples:
             ```python
@@ -1091,24 +1053,24 @@ class CacheProtocol(Protocol):
     ) -> Container[Any]:
         """Peek at key and value item pair from `side` of queue in cache.
 
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         If queue is empty, return default.
 
         Expired items are deleted from cache. Operation is atomic. Concurrent
         operations will be serialized.
 
-        See also `pull` and `push`.
+        See also [`pull`][typed_diskcache.interface.CacheProtocol.pull]
+        and [`push`][typed_diskcache.interface.CacheProtocol.push].
 
         Args:
-            prefix: key prefix. If None, key is integer
-            default: value to return if key is missing
-            side: either 'back' or 'front'
-            retry: retry if database timeout occurs
+            prefix: Key prefix. If None, key is integer.
+            default: Value to return if key is missing.
+            side: Either 'back' or 'front'.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if queue is empty
+            Container with cached value or default if queue is empty.
 
         Examples:
             ```python
@@ -1180,28 +1142,26 @@ class CacheProtocol(Protocol):
         side: QueueSideLiteral | QueueSide = ...,
         retry: bool = ...,
     ) -> Container[Any]:
-        """Peek at key and value item pair from `side` of queue in cache.
+        """Async peek at key and value item pair from `side` of queue in cache.
 
-        Asynchronous version of `peek`.
-
-        When prefix is None, integer keys are used.
-        Otherwise, string keys are used.
+        When prefix is None, integer keys are used. Otherwise, string keys are used.
 
         If queue is empty, return default.
 
         Expired items are deleted from cache. Operation is atomic. Concurrent
         operations will be serialized.
 
-        See also `pull` and `push`.
+        See also [`apull`][typed_diskcache.interface.CacheProtocol.apull]
+        and [`apush`][typed_diskcache.interface.CacheProtocol.apush].
 
         Args:
-            prefix: key prefix. If None, key is integer
-            default: value to return if key is missing
-            side: either 'back' or 'front'
-            retry: retry if database timeout occurs
+            prefix: Key prefix. If None, key is integer.
+            default: Value to return if key is missing.
+            side: Either 'back' or 'front'.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item or default if queue is empty
+            Container with cached value or default if queue is empty.
 
         Examples:
             ```python
@@ -1236,11 +1196,11 @@ class CacheProtocol(Protocol):
         operations will be serialized.
 
         Args:
-            last: last item in iteration order
-            retry: retry if database timeout occurs
+            last: Last item in iteration order.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item
+            Container with cached value.
 
         Examples:
             ```python
@@ -1262,19 +1222,17 @@ class CacheProtocol(Protocol):
         ...
 
     async def apeekitem(self, *, last: bool = ..., retry: bool = ...) -> Container[Any]:
-        """Peek at key and value item pair in cache based on iteration order.
-
-        Asynchronous version of `peekitem`.
+        """Async peek at key and value item pair in cache based on iteration order.
 
         Expired items are deleted from cache. Operation is atomic. Concurrent
         operations will be serialized.
 
         Args:
-            last: last item in iteration order
-            retry: retry if database timeout occurs
+            last: Last item in iteration order.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            value for item
+            Container with cached value.
 
         Examples:
             ```python
@@ -1309,20 +1267,18 @@ class CacheProtocol(Protocol):
         cache with 1,000 file references takes ~60ms to check.
 
         Args:
-            fix: correct inconsistencies
-            retry: retry if database timeout occurs
+            fix: Correct inconsistencies.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            list of warnings
+            List of warnings.
         """
         ...
 
     async def acheck(
         self, *, fix: bool = ..., retry: bool = ...
     ) -> list[warnings.WarningMessage]:
-        """Check database and file system consistency.
-
-        Asynchronous version of `check`.
+        """Async check database and file system consistency.
 
         Intended for use in testing and post-mortem error analysis.
 
@@ -1333,11 +1289,11 @@ class CacheProtocol(Protocol):
         cache with 1,000 file references takes ~60ms to check.
 
         Args:
-            fix: correct inconsistencies
-            retry: retry if database timeout occurs
+            fix: Correct inconsistencies.
+            retry: Retry if database timeout occurs.
 
         Returns:
-            list of warnings
+            List of warnings.
         """
         ...
         ...
@@ -1346,10 +1302,10 @@ class CacheProtocol(Protocol):
         """Iterate Cache keys in database sort order.
 
         Args:
-            reverse: reverse sort order
+            reverse: Reverse sort order.
 
         Yields:
-            key of item
+            Key of item.
 
         Examples:
             ```python
@@ -1369,15 +1325,13 @@ class CacheProtocol(Protocol):
         ...
 
     async def aiterkeys(self, *, reverse: bool = ...) -> AsyncGenerator[Any, None]:
-        """Iterate Cache keys in database sort order.
-
-        Asynchronous version of `iterkeys`.
+        """Async iterate Cache keys in database sort order.
 
         Args:
-            reverse: reverse sort order
+            reverse: Reverse sort order.
 
         Yields:
-            key of item
+            Key of item.
 
         Examples:
             ```python
@@ -1400,16 +1354,17 @@ class CacheProtocol(Protocol):
         """Update cache settings.
 
         Args:
-            settings: new settings
+            settings: New settings.
         """
         ...
 
     async def aupdate_settings(self, settings: Settings) -> None:
-        """Update cache settings.
+        """Async update cache settings.
 
-        Asynchronous version of `update_settings`.
+        Asynchronous version of
+        [`update_settings`][typed_diskcache.interface.CacheProtocol.update_settings].
 
         Args:
-            settings: new settings
+            settings: New settings.
         """
         ...

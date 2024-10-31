@@ -6,7 +6,7 @@ from contextlib import suppress
 from itertools import chain
 from os.path import expandvars
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
+from typing import TYPE_CHECKING, Any, NoReturn, overload
 
 from sqlalchemy.exc import OperationalError
 from typing_extensions import TypeVar, Unpack, override
@@ -15,6 +15,7 @@ from typed_diskcache import exception as te
 from typed_diskcache.core.types import (
     Container,
     FilterMethod,
+    FilterMethodLiteral,
     QueueSide,
     QueueSideLiteral,
     SettingsKwargs,
@@ -468,7 +469,7 @@ class FanoutCache(CacheProtocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = FilterMethod.OR,
+        method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
     ) -> Generator[Any, None, None]:
         for shard in self._shards:
             yield from shard.filter(tags, method=method)
@@ -478,7 +479,7 @@ class FanoutCache(CacheProtocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = FilterMethod.OR,
+        method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
     ) -> AsyncGenerator[Any, None]:
         for shard in self._shards:
             async for value in shard.afilter(tags, method=method):
@@ -487,49 +488,37 @@ class FanoutCache(CacheProtocol):
     @override
     def incr(
         self, key: Any, delta: int = 1, default: int | None = 0, *, retry: bool = False
-    ) -> int | None:
+    ) -> int:
         shard = fanout_utils.get_shard(key, self.disk, self._shards)
-        try:
-            return shard.incr(key, delta=delta, default=default, retry=retry)
-        except (OperationalError, TypedDiskcacheError):
-            return None
+        return shard.incr(key, delta=delta, default=default, retry=retry)
 
     @override
     async def aincr(
         self, key: Any, delta: int = 1, default: int | None = 0, *, retry: bool = False
-    ) -> int | None:
+    ) -> int:
         shard = fanout_utils.get_shard(key, self.disk, self._shards)
-        try:
-            return await shard.aincr(key, delta=delta, default=default, retry=retry)
-        except (OperationalError, TypedDiskcacheError):
-            return None
+        return await shard.aincr(key, delta=delta, default=default, retry=retry)
 
     @override
     def decr(
         self, key: Any, delta: int = 1, default: int | None = 0, *, retry: bool = False
-    ) -> int | None:
+    ) -> int:
         shard = fanout_utils.get_shard(key, self.disk, self._shards)
-        try:
-            return shard.decr(key, delta=delta, default=default, retry=retry)
-        except (OperationalError, TypedDiskcacheError):
-            return None
+        return shard.decr(key, delta=delta, default=default, retry=retry)
 
     @override
     async def adecr(
         self, key: Any, delta: int = 1, default: int | None = 0, *, retry: bool = False
-    ) -> int | None:
+    ) -> int:
         shard = fanout_utils.get_shard(key, self.disk, self._shards)
-        try:
-            return await shard.adecr(key, delta=delta, default=default, retry=retry)
-        except (OperationalError, TypedDiskcacheError):
-            return None
+        return await shard.adecr(key, delta=delta, default=default, retry=retry)
 
     @override
     def evict(
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = FilterMethod.OR,
+        method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
         retry: bool = False,
     ) -> int:
         total = 0
@@ -547,7 +536,7 @@ class FanoutCache(CacheProtocol):
         self,
         tags: str | Iterable[str],
         *,
-        method: Literal["and", "or"] | FilterMethod = FilterMethod.OR,
+        method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
         retry: bool = False,
     ) -> int:
         total = 0
