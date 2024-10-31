@@ -1,4 +1,4 @@
-site_name: typed-diskcache
+site_name: !ENV [SITE_NAME, "typed-diskcache"]
 site_url: https://typed-diskcache.readthedocs.io
 repo_url: https://github.com/phi-friday/typed-diskcache
 repo_name: phi-friday/typed-diskcache

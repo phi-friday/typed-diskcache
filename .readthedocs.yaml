@@ -9,4 +9,7 @@ build:
     - asdf install uv latest
     - asdf global uv latest
     - uv sync --group docs
-    - NO_COLOR=1 uv run mkdocs build --strict --site-dir $READTHEDOCS_OUTPUT/html
+    - |
+      export SITE_NAME="typed-diskcache $READTHEDOCS_VERSION"
+      export NO_COLOR=1
+      uv run mkdocs build --strict --site-dir $READTHEDOCS_OUTPUT/html
