@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
+from functools import partial
 from itertools import chain
 from os.path import expandvars
 from pathlib import Path
@@ -94,16 +96,14 @@ class FanoutCache(CacheProtocol):
             timeout=timeout,
             **kwargs,
         )
-        self._shards = tuple([
-            Shard(
-                directory / f"{index:03d}",
-                disk_type=disk_type,
-                disk_args=disk_args,
-                timeout=timeout,
-                **kwargs,
+        constructor = partial(
+            Shard, disk_type=disk_type, disk_args=disk_args, timeout=timeout, **kwargs
+        )
+        with ThreadPoolExecutor(shard_size) as pool:
+            futures = pool.map(
+                constructor, (directory / f"{index:03d}" for index in range(shard_size))
             )
-            for index in range(shard_size)
-        ])
+            self._shards = tuple(futures)
 
     @override
     def __len__(self) -> int:
