@@ -116,7 +116,7 @@ def init_args(
             session.commit()
 
     conn.update_settings(settings)
-    conn.timeout = timeout
+    conn.timeout = float(timeout)
 
     with conn.sync_session as session:
         page_size = session.execute(sa.text("PRAGMA page_size;")).scalar_one()
