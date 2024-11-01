@@ -218,7 +218,10 @@ def iter_disk(
     while True:
         with conn.sync_session as session:
             rows = session.execute(
-                stmt, {"left_bound": rowid, "right_bound": bound}
+                stmt,
+                {"left_bound": rowid, "right_bound": bound}
+                if ascending
+                else {"left_bound": 0, "right_bound": rowid},
             ).all()
             if not rows:
                 break
