@@ -438,6 +438,7 @@ class CacheProtocol(Protocol):
         Yields:
             Key of item matching tags.
         """
+        ...  # pragma: no cover
 
     def incr(
         self,
@@ -1300,6 +1301,7 @@ class CacheProtocol(Protocol):
                 # [4, 3, 2, 1, 0]
             ```
         """
+        ...  # pragma: no cover
 
     def update_settings(self, settings: Settings) -> None:
         """Update cache settings.
