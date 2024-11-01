@@ -1,3 +1,4 @@
+# pyright: reportReturnType=false
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -31,7 +32,6 @@ class DiskProtocol(Protocol):
     @property
     def directory(self) -> Path:
         """Return the directory for the cache."""
-        ...
 
     @directory.setter
     def directory(self, value: str | PathLike[str]) -> None: ...
@@ -45,7 +45,6 @@ class DiskProtocol(Protocol):
         Returns:
             hash value
         """
-        ...
 
     def put(self, key: Any) -> tuple[Any, bool]:
         """Convert `key` to a format suitable for storage in the Cache table.
@@ -59,7 +58,6 @@ class DiskProtocol(Protocol):
         Returns:
             (database key, raw boolean) pair
         """
-        ...
 
     def get(self, key: Any, *, raw: bool) -> Any:
         """Convert fields `key` and `raw` from Cache table to a Python key.
@@ -74,7 +72,6 @@ class DiskProtocol(Protocol):
         Returns:
             The corresponding Python key.
         """
-        ...
 
     def prepare(self, value: Any, *, key: Any = ...) -> tuple[Path, Path] | None:
         """Prepare filename and full-path tuple for file storage.
@@ -89,7 +86,6 @@ class DiskProtocol(Protocol):
         Returns:
             A tuple containing the filename and full path, or None if preparation fails.
         """
-        ...
 
     def store(
         self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
@@ -107,7 +103,6 @@ class DiskProtocol(Protocol):
         Returns:
             (size, mode, filename, value) tuple for Cache table
         """
-        ...
 
     async def astore(
         self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
@@ -127,7 +122,6 @@ class DiskProtocol(Protocol):
         Returns:
             (size, mode, filename, value) tuple for Cache table
         """
-        ...
 
     def fetch(
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
@@ -145,7 +139,6 @@ class DiskProtocol(Protocol):
         Returns:
             The corresponding Python value.
         """
-        ...
 
     async def afetch(
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
@@ -165,7 +158,6 @@ class DiskProtocol(Protocol):
         Returns:
             The corresponding Python value.
         """
-        ...
 
     def remove(self, file_path: str | PathLike[str]) -> None:
         """Remove a file given by `file_path`.
@@ -176,7 +168,6 @@ class DiskProtocol(Protocol):
         Args:
             file_path: The relative path to the file.
         """
-        ...
 
     async def aremove(self, file_path: str | PathLike[str]) -> None:
         """Asynchronously remove a file given by `file_path`.
@@ -189,7 +180,6 @@ class DiskProtocol(Protocol):
         Args:
             file_path: The relative path to the file.
         """
-        ...
 
     def filename(self, key: Any = ..., value: Any = ...) -> tuple[Path, Path]:
         """Return filename and full-path tuple for file storage.
@@ -208,7 +198,6 @@ class DiskProtocol(Protocol):
         Returns:
             filename and full-path tuple
         """
-        ...
 
     def model_dump(self) -> tuple[str, dict[str, Any]]:
         """Return the model name and model state.
@@ -219,4 +208,3 @@ class DiskProtocol(Protocol):
         Returns:
             (model name, model state) tuple
         """
-        ...

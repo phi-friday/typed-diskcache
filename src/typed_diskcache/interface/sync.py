@@ -1,3 +1,4 @@
+# pyright: reportReturnType=false
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -57,35 +58,28 @@ class SyncLockProtocol(Protocol):
     @property
     def key(self) -> Any:
         """Key for lock."""
-        ...
 
     @property
     def timeout(self) -> float:
         """Timeout for lock."""
-        ...
 
     @property
     def expire(self) -> float | None:
         """Expiration time for lock."""
-        ...
 
     @property
     def tags(self) -> frozenset[str]:
         """Tags for lock."""
-        ...
 
     @property
     def locked(self) -> bool:
         """Return true if the lock is acquired."""
-        ...
 
     def acquire(self) -> None:
         """Acquire lock using spin-lock algorithm."""
-        ...
 
     def release(self) -> None:
         """Release lock by deleting key."""
-        ...
 
     def __enter__(self) -> None: ...
 
@@ -141,35 +135,28 @@ class SyncSemaphoreProtocol(Protocol):
     @property
     def key(self) -> Any:
         """Key for semaphore."""
-        ...
 
     @property
     def value(self) -> int:
         """Value for semaphore."""
-        ...
 
     @property
     def timeout(self) -> float:
         """Timeout for semaphore."""
-        ...
 
     @property
     def expire(self) -> float | None:
         """Expiration time for semaphore."""
-        ...
 
     @property
     def tags(self) -> frozenset[str]:
         """Tags for semaphore."""
-        ...
 
     def acquire(self) -> None:
         """Acquire semaphore by decrementing value using spin-lock algorithm."""
-        ...
 
     def release(self) -> None:
         """Release semaphore by incrementing value."""
-        ...
 
     def __enter__(self) -> None: ...
 
@@ -229,7 +216,6 @@ class AsyncLockProtocol(Protocol):
     @property
     def timeout(self) -> float:
         """Timeout for lock."""
-        ...
 
     @property
     def expire(self) -> float | None:
@@ -238,20 +224,16 @@ class AsyncLockProtocol(Protocol):
     @property
     def tags(self) -> frozenset[str]:
         """Tags for lock."""
-        ...
 
     @property
     def locked(self) -> bool:
         """Return true if the lock is acquired."""
-        ...
 
     async def acquire(self) -> None:
         """Acquire lock using spin-lock algorithm."""
-        ...
 
     async def release(self) -> None:
         """Release lock by deleting key."""
-        ...
 
     async def __aenter__(self) -> None: ...
 
@@ -310,35 +292,28 @@ class AsyncSemaphoreProtocol(Protocol):
     @property
     def key(self) -> Any:
         """Key for semaphore."""
-        ...
 
     @property
     def value(self) -> int:
         """Value for semaphore."""
-        ...
 
     @property
     def timeout(self) -> float:
         """Timeout for semaphore."""
-        ...
 
     @property
     def expire(self) -> float | None:
         """Expiration time for semaphore."""
-        ...
 
     @property
     def tags(self) -> frozenset[str]:
         """Tags for semaphore."""
-        ...
 
     async def acquire(self) -> None:
         """Acquire semaphore by decrementing value using spin-lock algorithm."""
-        ...
 
     async def release(self) -> None:
         """Release semaphore by incrementing value."""
-        ...
 
     async def __aenter__(self) -> None: ...
 

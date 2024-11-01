@@ -1,3 +1,4 @@
+# pyright: reportReturnType=false
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, overload, runtime_checkable
@@ -68,27 +69,22 @@ class CacheProtocol(Protocol):
     @property
     def directory(self) -> Path:
         """Directory for cache."""
-        ...
 
     @property
     def timeout(self) -> float:
         """Timeout for cache operations."""
-        ...
 
     @property
     def conn(self) -> Connection:
         """Database connection."""
-        ...
 
     @property
     def disk(self) -> DiskProtocol:
         """Disk object."""
-        ...
 
     @property
     def settings(self) -> Settings:
         """Settings for cache."""
-        ...
 
     @overload
     def get(
@@ -111,7 +107,6 @@ class CacheProtocol(Protocol):
         Returns:
             Container with cached value or default if key not found.
         """
-        ...
 
     @overload
     async def aget(
@@ -136,7 +131,6 @@ class CacheProtocol(Protocol):
         Returns:
             Container with cached value or default if key not found.
         """
-        ...
 
     def set(
         self,
@@ -159,7 +153,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was set.
         """
-        ...
 
     async def aset(
         self,
@@ -182,7 +175,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was set.
         """
-        ...
 
     def delete(self, key: Any, *, retry: bool = ...) -> bool:
         """Delete corresponding item for `key` from cache.
@@ -196,7 +188,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was deleted.
         """
-        ...
 
     async def adelete(self, key: Any, *, retry: bool = ...) -> bool:
         """Asynchronously delete corresponding item for `key` from cache.
@@ -210,7 +201,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was deleted.
         """
-        ...
 
     def clear(self, *, retry: bool = ...) -> int:
         """Remove all items from cache.
@@ -227,7 +217,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of rows removed.
         """
-        ...
 
     async def aclear(self, *, retry: bool = ...) -> int:
         """Asynchronously remove all items from cache.
@@ -244,7 +233,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of rows removed.
         """
-        ...
 
     def stats(self, *, enable: bool = ..., reset: bool = ...) -> Stats:
         """Return cache statistics hits and misses.
@@ -256,7 +244,6 @@ class CacheProtocol(Protocol):
         Returns:
             (hits, misses)
         """
-        ...
 
     async def astats(self, *, enable: bool = ..., reset: bool = ...) -> Stats:
         """Asynchronously return cache statistics hits and misses.
@@ -268,7 +255,6 @@ class CacheProtocol(Protocol):
         Returns:
             (hits, misses)
         """
-        ...
 
     def volume(self) -> int:
         """Return estimated total size of cache on disk.
@@ -276,7 +262,6 @@ class CacheProtocol(Protocol):
         Returns:
             Size in bytes.
         """
-        ...
 
     async def avolume(self) -> int:
         """Asynchronously return estimated total size of cache on disk.
@@ -284,15 +269,12 @@ class CacheProtocol(Protocol):
         Returns:
             Size in bytes.
         """
-        ...
 
     def close(self) -> None:
         """Close database connection."""
-        ...
 
     async def aclose(self) -> None:
         """Asynchronously close database connection."""
-        ...
 
     def touch(self, key: Any, *, expire: float | None = ..., retry: bool = ...) -> bool:
         """Touch `key` in cache and update `expire` time.
@@ -305,7 +287,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if key was touched.
         """
-        ...
 
     async def atouch(
         self, key: Any, *, expire: float | None = ..., retry: bool = ...
@@ -320,7 +301,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if key was touched.
         """
-        ...
 
     def add(
         self,
@@ -348,7 +328,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was added.
         """
-        ...
 
     async def aadd(
         self,
@@ -376,7 +355,6 @@ class CacheProtocol(Protocol):
         Returns:
             True if item was added.
         """
-        ...
 
     @overload
     def pop(
@@ -401,7 +379,6 @@ class CacheProtocol(Protocol):
         Returns:
             Container with cached value or default if key not found.
         """
-        ...
 
     @overload
     async def apop(
@@ -429,7 +406,6 @@ class CacheProtocol(Protocol):
         Returns:
             Container with cached value or default if key not found.
         """
-        ...
 
     def filter(
         self,
@@ -446,7 +422,6 @@ class CacheProtocol(Protocol):
         Yields:
             Key of item matching tags.
         """
-        ...
 
     async def afilter(
         self,
@@ -463,7 +438,6 @@ class CacheProtocol(Protocol):
         Yields:
             Key of item matching tags.
         """
-        ...
 
     def incr(
         self,
@@ -493,7 +467,6 @@ class CacheProtocol(Protocol):
         Returns:
             Incremented value or default if key not found.
         """
-        ...
 
     async def aincr(
         self,
@@ -523,7 +496,6 @@ class CacheProtocol(Protocol):
         Returns:
             Incremented value or default if key not found.
         """
-        ...
 
     def decr(
         self,
@@ -556,7 +528,6 @@ class CacheProtocol(Protocol):
         Returns:
             Decremented value or default if key not found.
         """
-        ...
 
     async def adecr(
         self,
@@ -589,7 +560,6 @@ class CacheProtocol(Protocol):
         Returns:
             Decremented value or default if key not found.
         """
-        ...
 
     def evict(
         self,
@@ -615,7 +585,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of rows removed.
         """
-        ...
 
     async def aevict(
         self,
@@ -641,7 +610,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of rows removed.
         """
-        ...
 
     def expire(self, now: float | None = ..., *, retry: bool = ...) -> int:
         """Remove expired items from cache.
@@ -660,7 +628,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of items removed.
         """
-        ...
 
     async def aexpire(self, now: float | None = ..., *, retry: bool = ...) -> int:
         """Async remove expired items from cache.
@@ -679,7 +646,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of items removed.
         """
-        ...
 
     def cull(self, *, retry: bool = ...) -> int:
         """Cull items from cache until volume is less than size limit.
@@ -697,7 +663,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of items removed.
         """
-        ...
 
     async def acull(self, *, retry: bool = ...) -> int:
         """Async cull items from cache until volume is less than size limit.
@@ -715,7 +680,6 @@ class CacheProtocol(Protocol):
         Returns:
             Count of items removed.
         """
-        ...
 
     def push(  # noqa: PLR0913
         self,
@@ -765,7 +729,6 @@ class CacheProtocol(Protocol):
                 # userids-500000000000000
             ```
         """
-        ...
 
     async def apush(  # noqa: PLR0913
         self,
@@ -815,7 +778,6 @@ class CacheProtocol(Protocol):
                 # userids-500000000000000
             ```
         """
-        ...
 
     @overload
     def pull(
@@ -910,7 +872,6 @@ class CacheProtocol(Protocol):
                 # 1234
             ```
         """
-        ...
 
     @overload
     async def apull(
@@ -1005,7 +966,6 @@ class CacheProtocol(Protocol):
                 # 1234
             ```
         """
-        ...
 
     @overload
     def peek(
@@ -1096,7 +1056,6 @@ class CacheProtocol(Protocol):
                 # a
             ```
         """
-        ...
 
     @overload
     async def apeek(
@@ -1187,7 +1146,6 @@ class CacheProtocol(Protocol):
                 # a
             ```
         """
-        ...
 
     def peekitem(self, *, last: bool = ..., retry: bool = ...) -> Container[Any]:
         """Peek at key and value item pair in cache based on iteration order.
@@ -1219,7 +1177,6 @@ class CacheProtocol(Protocol):
                 # ('a', 0)
             ```
         """
-        ...
 
     async def apeekitem(self, *, last: bool = ..., retry: bool = ...) -> Container[Any]:
         """Async peek at key and value item pair in cache based on iteration order.
@@ -1251,7 +1208,6 @@ class CacheProtocol(Protocol):
                 # ('a', 0)
             ```
         """
-        ...
 
     def check(
         self, *, fix: bool = ..., retry: bool = ...
@@ -1273,7 +1229,6 @@ class CacheProtocol(Protocol):
         Returns:
             List of warnings.
         """
-        ...
 
     async def acheck(
         self, *, fix: bool = ..., retry: bool = ...
@@ -1295,8 +1250,6 @@ class CacheProtocol(Protocol):
         Returns:
             List of warnings.
         """
-        ...
-        ...
 
     def iterkeys(self, *, reverse: bool = ...) -> Generator[Any, None, None]:
         """Iterate Cache keys in database sort order.
@@ -1322,7 +1275,6 @@ class CacheProtocol(Protocol):
                 # [4, 3, 2, 1, 0]
             ```
         """
-        ...
 
     async def aiterkeys(self, *, reverse: bool = ...) -> AsyncGenerator[Any, None]:
         """Async iterate Cache keys in database sort order.
@@ -1348,7 +1300,6 @@ class CacheProtocol(Protocol):
                 # [4, 3, 2, 1, 0]
             ```
         """
-        ...
 
     def update_settings(self, settings: Settings) -> None:
         """Update cache settings.
@@ -1356,7 +1307,6 @@ class CacheProtocol(Protocol):
         Args:
             settings: New settings.
         """
-        ...
 
     async def aupdate_settings(self, settings: Settings) -> None:
         """Async update cache settings.
@@ -1367,4 +1317,3 @@ class CacheProtocol(Protocol):
         Args:
             settings: New settings.
         """
-        ...
