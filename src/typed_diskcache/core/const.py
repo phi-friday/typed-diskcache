@@ -29,6 +29,8 @@ SPIN_LOCK_SLEEP = 0.001
 """The time to sleep in the spin lock."""
 DEFAULT_LOCK_TIMEOUT = 10
 """The default lock timeout."""
+DEFAULT_SIZE_LIMIT = 2**30  # 1gb
+"""The default size limit of the cache in bytes."""
 
 
 ENOVAL: Constant[Literal["ENOVAL"]] = Constant("ENOVAL")

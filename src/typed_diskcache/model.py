@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, Json, JsonValue
 
+from typed_diskcache.core.const import DEFAULT_SIZE_LIMIT
 from typed_diskcache.core.types import (
     EvictionPolicy,
     SQLiteAutoVacuum,
@@ -58,7 +59,7 @@ class Settings(BaseModel):
 
     statistics: bool = False
     eviction_policy: EvictionPolicy = EvictionPolicy.LEAST_RECENTLY_STORED
-    size_limit: int = 2**30
+    size_limit: int = DEFAULT_SIZE_LIMIT
     cull_limit: int = 10
     serialized_disk: Annotated[
         tuple[str, dict[str, JsonValue]] | Json[tuple[str, dict[str, JsonValue]]],

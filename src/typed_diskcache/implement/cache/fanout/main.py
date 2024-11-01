@@ -8,10 +8,12 @@ from os.path import expandvars
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, overload
 
+import anyio
 from sqlalchemy.exc import OperationalError
 from typing_extensions import TypeVar, Unpack, override
 
 from typed_diskcache import exception as te
+from typed_diskcache.core.const import DEFAULT_SIZE_LIMIT
 from typed_diskcache.core.types import (
     Container,
     FilterMethod,
@@ -25,7 +27,6 @@ from typed_diskcache.exception import TypedDiskcacheError
 from typed_diskcache.implement.cache import utils as cache_utils
 from typed_diskcache.implement.cache.default import Cache as Shard
 from typed_diskcache.implement.cache.fanout import utils as fanout_utils
-from typed_diskcache.implement.cache.utils import init_args
 from typed_diskcache.interface.cache import CacheProtocol
 
 if TYPE_CHECKING:
@@ -66,15 +67,7 @@ class FanoutCache(CacheProtocol):
             [`Settings`][typed_diskcache.model.Settings].
     """
 
-    __slots__ = (
-        "_directory",
-        "_disk",
-        "_conn",
-        "_settings",
-        "_page_size",
-        "_shard_size",
-        "_shards",
-    )
+    __slots__ = ("_shards", "_cache")
 
     def __init__(
         self,
@@ -91,31 +84,26 @@ class FanoutCache(CacheProtocol):
         directory = directory.expanduser()
         directory = Path(expandvars(directory))
 
-        disk, conn, settings, page_size = init_args(
-            directory, disk_type, disk_args, timeout, **kwargs
-        )
+        size_limit = kwargs.get("size_limit", DEFAULT_SIZE_LIMIT)
+        kwargs["size_limit"] = size_limit // shard_size
 
-        settings = settings.model_copy(
-            update={"size_limit": settings.size_limit // shard_size}
+        self._cache = Shard(
+            directory,
+            disk_type=disk_type,
+            disk_args=disk_args,
+            timeout=timeout,
+            **kwargs,
         )
-
-        self._shard_size = shard_size
-        self._directory = directory
-        self._disk = disk
-        self._conn = conn
-        self._settings = settings
-        self._page_size = page_size
-        self._shards: tuple[Shard, ...] = tuple(
-            object.__new__(Shard) for _ in range(shard_size)
-        )
-        fanout_utils.update_shards_state(
-            self._shards,
-            self.directory,
-            self.disk,
-            self.conn,
-            self.settings,
-            self._page_size,
-        )
+        self._shards = tuple([
+            Shard(
+                directory / f"{index:03d}",
+                disk_type=disk_type,
+                disk_args=disk_args,
+                timeout=timeout,
+                **kwargs,
+            )
+            for index in range(shard_size)
+        ])
 
     @override
     def __len__(self) -> int:
@@ -164,60 +152,44 @@ class FanoutCache(CacheProtocol):
         import cloudpickle
 
         return {
-            "shard_size": self._shard_size,
-            "directory": str(self.directory),
-            "disk": cloudpickle.dumps(self.disk),
-            "conn": cloudpickle.dumps(self.conn),
-            "settings": self.settings.model_dump_json(),
-            "page_size": self._page_size,
+            "shards": cloudpickle.dumps(self._shards),
+            "cache": cloudpickle.dumps(self._cache),
         }
 
     @override
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         import cloudpickle
 
-        from typed_diskcache.model import Settings
+        cache: Shard = cloudpickle.loads(state["cache"])
+        shards: tuple[Shard] = cloudpickle.loads(state["shards"])
 
-        self._shard_size = state["shard_size"]
-        self._directory = Path(state["directory"])
-        self._disk = cloudpickle.loads(state["disk"])
-        self._conn = cloudpickle.loads(state["conn"])
-        self._settings = Settings.model_validate_json(state["settings"])
-        self._page_size = state["page_size"]
-        self._shards = tuple(object.__new__(Shard) for _ in range(self._shard_size))
-        fanout_utils.update_shards_state(
-            self._shards,
-            self._directory,
-            self._disk,
-            self.conn,
-            self.settings,
-            self._page_size,
-        )
+        self._cache = cache
+        self._shards = shards
 
     @property
     @override
     def directory(self) -> Path:
-        return self._directory
+        return self._cache.directory
 
     @property
     @override
     def timeout(self) -> float:
-        return self._conn.timeout
+        return self._cache.timeout
 
     @property
     @override
     def conn(self) -> Connection:
-        return self._conn
+        return self._cache.conn
 
     @property
     @override
     def disk(self) -> DiskProtocol:
-        return self._disk
+        return self._cache.disk
 
     @property
     @override
     def settings(self) -> Settings:
-        return self._settings
+        return self._cache.settings
 
     @settings.setter
     def settings(self, value: Settings) -> None:
@@ -371,10 +343,15 @@ class FanoutCache(CacheProtocol):
     @override
     def close(self) -> None:
         self.conn.close()
+        for shard in self._shards:
+            shard.close()
 
     @override
     async def aclose(self) -> None:
         await self.conn.aclose()
+        async with anyio.create_task_group() as task_group:
+            for shard in self._shards:
+                task_group.start_soon(shard.aclose)
 
     @override
     def touch(
@@ -709,18 +686,13 @@ class FanoutCache(CacheProtocol):
 
     @override
     def update_settings(self, settings: Settings) -> None:
-        first_shard = next(iter(self._shards))
-        first_shard.update_settings(settings)
-        settings = first_shard.settings
-        for shard in self._shards[1:]:
-            shard._settings = settings  # noqa: SLF001
-        self._settings = settings
+        for shard in self._shards:
+            shard.update_settings(settings)
+        self._cache.update_settings(settings)
 
     @override
     async def aupdate_settings(self, settings: Settings) -> None:
-        first_shard = next(iter(self._shards))
-        await first_shard.aupdate_settings(settings)
-        settings = first_shard.settings
-        for shard in self._shards[1:]:
-            shard._settings = settings  # noqa: SLF001
-        self._settings = settings
+        async with anyio.create_task_group() as task_group:
+            for shard in self._shards:
+                task_group.start_soon(shard.aupdate_settings, settings)
+            task_group.start_soon(self._cache.aupdate_settings, settings)

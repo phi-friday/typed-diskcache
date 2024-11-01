@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING, Any
 
 from typing_extensions import ParamSpec, TypeAlias, TypeVar
@@ -11,13 +10,10 @@ from typed_diskcache.log import get_logger
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
     from os import PathLike
-    from pathlib import Path
 
-    from typed_diskcache.database import Connection
     from typed_diskcache.implement.cache.default import Cache
     from typed_diskcache.interface.cache import CacheProtocol
     from typed_diskcache.interface.disk import DiskProtocol
-    from typed_diskcache.model import Settings
 
 __all__ = []
 
@@ -82,33 +78,3 @@ async def async_loop_total(
     while flag:
         total, flag = await async_loop_count(total, func, *args, **kwargs)
     return total
-
-
-def update_shards_state(  # noqa: PLR0913
-    shards: tuple[Cache, ...],
-    directory: Path,
-    disk: DiskProtocol,
-    conn: Connection,
-    settings: Settings,
-    page_size: int,
-) -> None:
-    for index, shard in enumerate(shards):
-        update_shard_state(index, shard, directory, disk, conn, settings, page_size)
-
-
-def update_shard_state(  # noqa: PLR0913
-    index: int,
-    shard: Cache,
-    directory: Path,
-    disk: DiskProtocol,
-    conn: Connection,
-    settings: Settings,
-    page_size: int,
-) -> None:
-    shard._directory = directory / f"{index:03d}"  # noqa: SLF001
-    shard._directory.mkdir(parents=True, exist_ok=True)  # noqa: SLF001
-    shard._disk = copy(disk)  # noqa: SLF001
-    shard._disk.directory = shard.directory  # noqa: SLF001
-    shard._conn = conn  # noqa: SLF001
-    shard._settings = settings  # noqa: SLF001
-    shard._page_size = page_size  # noqa: SLF001
