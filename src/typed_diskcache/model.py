@@ -55,10 +55,12 @@ class SQLiteSettings(BaseModel):
 class Settings(BaseModel):
     """Settings for the cache."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_enum_values=True)
 
     statistics: bool = False
-    eviction_policy: EvictionPolicy = EvictionPolicy.LEAST_RECENTLY_STORED
+    eviction_policy: EvictionPolicy = Field(
+        default=EvictionPolicy.LEAST_RECENTLY_STORED, validate_default=True
+    )
     size_limit: int = DEFAULT_SIZE_LIMIT
     cull_limit: int = 10
     serialized_disk: Annotated[
