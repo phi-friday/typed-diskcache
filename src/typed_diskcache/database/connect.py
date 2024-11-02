@@ -238,16 +238,14 @@ def ensure_sqlite_async_engine(
 
 
 @contextmanager
-def sync_transact(session: SyncConnT) -> Generator[SyncConnT, None, None]:
-    conn = session.connection() if isinstance(session, Session) else session
-
+def sync_transact(conn: Connection) -> Generator[Connection, None, None]:
     is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
     if is_begin is False:
         conn.execute(sa.text("BEGIN IMMEDIATE;"))
         conn.info[CONNECTION_BEGIN_INFO_KEY] = True
 
     try:
-        yield session
+        yield conn
     except Exception:
         conn.rollback()
         raise
@@ -257,19 +255,16 @@ def sync_transact(session: SyncConnT) -> Generator[SyncConnT, None, None]:
 
 
 @asynccontextmanager
-async def async_transact(session: AsyncConnT) -> AsyncGenerator[AsyncConnT, None]:
-    if isinstance(session, AsyncSession):
-        conn = await session.connection()
-    else:
-        conn = session
-
+async def async_transact(
+    conn: AsyncConnection,
+) -> AsyncGenerator[AsyncConnection, None]:
     is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
     if is_begin is False:
-        await conn.execute(sa.text("BEGIN IMMEDIATE;"))
+        conn.sync_connection.execute(sa.text("BEGIN IMMEDIATE;"))  # pyright: ignore[reportOptionalMemberAccess]
         conn.info[CONNECTION_BEGIN_INFO_KEY] = True
 
     try:
-        yield session
+        yield conn
     except Exception:
         await conn.rollback()
         raise
@@ -279,20 +274,22 @@ async def async_transact(session: AsyncConnT) -> AsyncGenerator[AsyncConnT, None
 
 
 @overload
-def transact(session: SyncConnT) -> AbstractContextManager[SyncConnT]: ...
+def transact(conn: Connection) -> AbstractContextManager[Connection]: ...
 @overload
-def transact(session: AsyncConnT) -> AbstractAsyncContextManager[AsyncConnT]: ...
+def transact(conn: AsyncConnection) -> AbstractAsyncContextManager[AsyncConnection]: ...
 @overload
 def transact(
-    session: SyncConnT | AsyncConnT,
-) -> AbstractContextManager[SyncConnT] | AbstractAsyncContextManager[AsyncConnT]: ...
+    conn: Connection | AsyncConnection,
+) -> (
+    AbstractContextManager[Connection] | AbstractAsyncContextManager[AsyncConnection]
+): ...
 def transact(
-    session: SyncConnT | AsyncConnT,
-) -> AbstractContextManager[SyncConnT] | AbstractAsyncContextManager[AsyncConnT]:
+    conn: Connection | AsyncConnection,
+) -> AbstractContextManager[Connection] | AbstractAsyncContextManager[AsyncConnection]:
     """transaction context manager"""
-    if isinstance(session, (AsyncSession, AsyncConnection)):
-        return async_transact(session)
-    return sync_transact(session)
+    if isinstance(conn, AsyncConnection):
+        return async_transact(conn)
+    return sync_transact(conn)
 
 
 @overload

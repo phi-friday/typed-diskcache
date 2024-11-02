@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import threading
-from contextlib import suppress
+from contextlib import asynccontextmanager, contextmanager, suppress
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session, async_sessionmaker
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.util import ScopedRegistry
 
 from typed_diskcache import exception as te
+from typed_diskcache.core.context import log_context, override_context
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
-from typed_diskcache.database.session import AsyncSession, Session
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
     from os import PathLike
+
+    from sqlalchemy.engine import Connection as SAConnection
+    from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
     from typed_diskcache.model import Settings
 
@@ -118,21 +120,17 @@ class Connection:
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
     @cached_property
-    def sync_sessionmaker(self) -> sessionmaker[Session]:
-        """Return a sync sessionmaker."""
-        return sessionmaker(self._sync_engine, class_=Session)
-
-    @cached_property
-    def sync_scoped_session(self) -> scoped_session[Session]:
-        """Return a sync scoped session."""
-        return scoped_session(self.sync_sessionmaker, scopefunc=self._sync_scopefunc)
+    def _sync_registry(self) -> ScopedRegistry[SAConnection]:
+        scope_func = (
+            threading.get_native_id
+            if self._sync_scopefunc is None
+            else self._sync_scopefunc
+        )
+        return ScopedRegistry(self._sync_engine.connect, scopefunc=scope_func)
 
     @property
-    def sync_session(self) -> Session:
-        """Return a sync session."""
-        if self._sync_scopefunc is None:
-            return self.sync_sessionmaker()
-        return self.sync_scoped_session()
+    def _connection(self) -> SAConnection:
+        return self._sync_registry()
 
     @cached_property
     def _async_engine(self) -> AsyncEngine:
@@ -143,26 +141,47 @@ class Connection:
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
     @cached_property
-    def async_sessionmaker(self) -> async_sessionmaker[AsyncSession]:
-        """Return an async sessionmaker."""
-        return async_sessionmaker(self._async_engine, class_=AsyncSession)
-
-    @cached_property
-    def async_scoped_session(self) -> async_scoped_session[AsyncSession]:
-        """Return an async scoped session."""
-        return async_scoped_session(
-            self.async_sessionmaker,
-            scopefunc=threading.get_native_id
+    def _async_registry(self) -> ScopedRegistry[AsyncConnection]:
+        scope_func = (
+            threading.get_native_id
             if self._async_scopefunc is None
-            else self._async_scopefunc,
+            else self._async_scopefunc
         )
+        return ScopedRegistry(self._async_engine.connect, scopefunc=scope_func)
 
     @property
-    def async_session(self) -> AsyncSession:
-        """Return an async session."""
-        if self._async_scopefunc is None:
-            return self.async_sessionmaker()
-        return self.async_scoped_session()
+    def _aconnection(self) -> AsyncConnection:
+        return self._async_registry()
+
+    @contextmanager
+    def connect(self) -> Generator[SAConnection, None, None]:
+        """Connect to the database."""
+        connection = self._connection
+        try:
+            yield connection
+        finally:
+            context = override_context.get()
+            if context is None:
+                connection.close()
+            else:
+                log_context_value = log_context.get()
+                if log_context_value == context:
+                    connection.close()
+
+    @asynccontextmanager
+    async def aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
+        """Connect to the database."""
+        connection = self._aconnection
+        try:
+            yield connection
+        finally:
+            context = override_context.get()
+            if context is None:
+                await connection.close()
+            else:
+                log_context_value = log_context.get()
+                if log_context_value == context:
+                    await connection.close()
 
     def close(self) -> None:
         """Close the connection."""
@@ -172,11 +191,9 @@ class Connection:
             self._async_engine.sync_engine.dispose(close=True)
         for key in (
             "_sync_engine",
-            "_sync_sessionmaker",
-            "_sync_scoped_session",
             "_async_engine",
-            "_async_sessionmaker",
-            "_async_scoped_session",
+            "_sync_registry",
+            "_async_registry",
         ):
             self.__dict__.pop(key, None)
 
@@ -188,11 +205,9 @@ class Connection:
             await self._async_engine.dispose(close=True)
         for key in (
             "_sync_engine",
-            "_sync_sessionmaker",
-            "_sync_scoped_session",
             "_async_engine",
-            "_async_sessionmaker",
-            "_async_scoped_session",
+            "_sync_registry",
+            "_async_registry",
         ):
             self.__dict__.pop(key, None)
 

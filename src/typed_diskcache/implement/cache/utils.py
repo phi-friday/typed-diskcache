@@ -57,11 +57,10 @@ def init_args(
         sync_scopefunc=get_log_context,
         async_scopefunc=get_log_context,
     )
-    with conn.sync_session as session:
-        connection = session.connection()
-        revision_auto(connection)
+    with conn.connect() as session:
+        revision_auto(session)
 
-    with conn.sync_session as session:
+    with conn.connect() as session:
         logger.debug("Checking for existing cache settings")
         try:
             setting_records: Sequence[SettingsTable] = session.scalars(
@@ -102,20 +101,30 @@ def init_args(
         for key, value in settings.sqlite_settings.model_dump(by_alias=True).items()
     ]
     settings_key_id = {x.key: x.id for x in setting_records}
-    with conn.sync_session as session:
-        with database_transact(session):
+    with conn.connect() as sa_conn:
+        with database_transact(sa_conn):
             for record in chain(new_setting_records, new_sqlite_setting_records):
                 if record.key in settings_key_id:
                     record.id = settings_key_id[record.key]
-                    session.merge(record)
+                    sa_conn.execute(
+                        sa.update(SettingsTable)
+                        .where(SettingsTable.id == record.id)
+                        .values(value=record.value, modified_at=record.modified_at)
+                    )
                 else:
-                    session.add(record)
+                    sa_conn.execute(
+                        sa.insert(SettingsTable).values(
+                            key=record.key,
+                            value=record.value,
+                            modified_at=record.modified_at,
+                        )
+                    )
             session.commit()
 
     conn.update_settings(settings)
     conn.timeout = float(timeout)
 
-    with conn.sync_session as session:
+    with conn.connect() as session:
         page_size = session.execute(sa.text("PRAGMA page_size;")).scalar_one()
 
     return disk, conn, settings, page_size
