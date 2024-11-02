@@ -109,9 +109,9 @@ class Cache(CacheProtocol):
     @context("Cache.length")
     @override
     def __len__(self) -> int:
-        with self.conn.connect() as session:
+        with self.conn.connect() as sa_conn:
             return (
-                session.execute(
+                sa_conn.execute(
                     sa.select(Metadata.value).where(Metadata.key == MetadataKey.COUNT)
                 )
                 .scalars()
@@ -133,8 +133,8 @@ class Cache(CacheProtocol):
     @override
     def __contains__(self, key: Any) -> bool:
         db_key, raw = self.disk.put(key)
-        with self.conn.connect() as session:
-            row = session.execute(
+        with self.conn.connect() as sa_conn:
+            row = sa_conn.execute(
                 sa.select(CacheTable.id).where(
                     CacheTable.key == db_key,
                     CacheTable.raw == raw,
@@ -246,8 +246,8 @@ class Cache(CacheProtocol):
             and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
-            with self.conn.connect() as session:
-                row = session.execute(
+            with self.conn.connect() as sa_conn:
+                row = sa_conn.execute(
                     select_stmt, {"expire_time": time.time()}
                 ).one_or_none()
 
@@ -264,17 +264,17 @@ class Cache(CacheProtocol):
                     return cache_utils.wrap_default(default)
 
                 logger.debug("Key `%s` found", key)
-                return cache_utils.wrap_instnace(key, value, row, session)
+                return cache_utils.wrap_instnace(key, value, row, sa_conn)
 
         cache_hit_stmt, cache_miss_stmt, update_stmt = (
             default_utils.prepare_get_update_stmt(self.conn)
         )
 
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=retry) as (
-            session,
+            sa_conn,
             _,
         ):
-            row = session.execute(
+            row = sa_conn.execute(
                 select_stmt, {"expire_time": time.time()}
             ).one_or_none()
 
@@ -282,7 +282,7 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` not found", key)
                 if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
-                    session.execute(cache_miss_stmt)
+                    sa_conn.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
             try:
@@ -293,15 +293,15 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` file `%s` not found", key, row.filepath)
                 if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
-                    session.execute(cache_miss_stmt)
+                    sa_conn.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
             if self.settings.statistics:
                 logger.debug("Update cache hit statistics")
-                session.execute(cache_hit_stmt)
+                sa_conn.execute(cache_hit_stmt)
             if update_stmt is not None:
                 logger.debug("Update eviction metadata")
-                session.execute(
+                sa_conn.execute(
                     update_stmt,
                     {
                         "id": row.id,
@@ -311,7 +311,7 @@ class Cache(CacheProtocol):
                 )
 
             logger.debug("Key `%s` found", key)
-            return cache_utils.wrap_instnace(key, value, row, session)
+            return cache_utils.wrap_instnace(key, value, row, sa_conn)
 
     @overload
     async def aget(
@@ -333,8 +333,8 @@ class Cache(CacheProtocol):
             and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
-            async with self.conn.aconnect() as session:
-                row_fetch = await session.execute(
+            async with self.conn.aconnect() as sa_conn:
+                row_fetch = await sa_conn.execute(
                     select_stmt.options(sa_orm.joinedload(CacheTable.tags)),
                     {"expire_time": time.time()},
                 )
@@ -353,7 +353,7 @@ class Cache(CacheProtocol):
                     return cache_utils.wrap_default(default)
 
                 logger.debug("Key `%s` found", key)
-                return await cache_utils.async_wrap_instnace(key, value, row, session)
+                return await cache_utils.async_wrap_instnace(key, value, row, sa_conn)
 
         cache_hit_stmt, cache_miss_stmt, update_stmt = (
             default_utils.prepare_get_update_stmt(self.conn)
@@ -361,8 +361,8 @@ class Cache(CacheProtocol):
 
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry
-        ) as (session, _):
-            row_fetch = await session.execute(
+        ) as (sa_conn, _):
+            row_fetch = await sa_conn.execute(
                 select_stmt.options(sa_orm.joinedload(CacheTable.tags)),
                 {"expire_time": time.time()},
             )
@@ -372,7 +372,7 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` not found", key)
                 if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
-                    await session.execute(cache_miss_stmt)
+                    await sa_conn.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
             try:
@@ -383,15 +383,15 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` file `%s` not found", key, row.filepath)
                 if self.settings.statistics:
                     logger.debug("Update cache miss statistics")
-                    await session.execute(cache_miss_stmt)
+                    await sa_conn.execute(cache_miss_stmt)
                 return cache_utils.wrap_default(default)
 
             if self.settings.statistics:
                 logger.debug("Update cache hit statistics")
-                await session.execute(cache_hit_stmt)
+                await sa_conn.execute(cache_hit_stmt)
             if update_stmt is not None:
                 logger.debug("Update eviction metadata")
-                await session.execute(
+                await sa_conn.execute(
                     update_stmt,
                     {
                         "id": row.id,
@@ -401,7 +401,7 @@ class Cache(CacheProtocol):
                 )
 
             logger.debug("Key `%s` found", key)
-            return await cache_utils.async_wrap_instnace(key, value, row, session)
+            return await cache_utils.async_wrap_instnace(key, value, row, sa_conn)
 
     @context
     @override
@@ -561,7 +561,7 @@ class Cache(CacheProtocol):
     def _cull(
         self,
         now: float,
-        session: SAConnection,
+        connection: SAConnection,
         cleanup: CleanupFunc,
         limit: int | None = None,
         stacklevel: int = 2,
@@ -579,12 +579,12 @@ class Cache(CacheProtocol):
             default_utils.prepare_cull_stmt(self.conn, now=now, cull_limit=cull_limit)
         )
 
-        filenames = session.execute(filenames_select_stmt).scalars().all()
+        filenames = connection.execute(filenames_select_stmt).scalars().all()
         if filenames:
             logger.debug(
                 "Culling cleanup files: %d", len(filenames), stacklevel=stacklevel
             )
-            session.execute(filenames_delete_stmt)
+            connection.execute(filenames_delete_stmt)
             cleanup(filenames)
 
             cull_limit -= len(filenames)
@@ -601,11 +601,11 @@ class Cache(CacheProtocol):
             )
             return
 
-        rows = session.execute(select_stmt, {"limit": cull_limit}).all()
+        rows = connection.execute(select_stmt, {"limit": cull_limit}).all()
 
         if rows:
             logger.debug("Culling cleanup files: %d", len(rows), stacklevel=stacklevel)
-            session.execute(
+            connection.execute(
                 sa.delete(CacheTable).where(
                     CacheTable.id.in_(
                         select_stmt.with_only_columns(CacheTable.id).scalar_subquery()
@@ -618,7 +618,7 @@ class Cache(CacheProtocol):
     async def _async_cull(
         self,
         now: float,
-        session: AsyncConnection,
+        connection: AsyncConnection,
         cleanup: AsyncCleanupFunc,
         limit: int | None = None,
         stacklevel: int = 2,
@@ -636,13 +636,13 @@ class Cache(CacheProtocol):
             default_utils.prepare_cull_stmt(self.conn, now=now, cull_limit=cull_limit)
         )
 
-        filenames_fetch = await session.execute(filenames_select_stmt)
+        filenames_fetch = await connection.execute(filenames_select_stmt)
         filenames = filenames_fetch.scalars().all()
         if filenames:
             logger.debug(
                 "Culling cleanup files: %d", len(filenames), stacklevel=stacklevel
             )
-            await session.execute(filenames_delete_stmt)
+            await connection.execute(filenames_delete_stmt)
             await cleanup(filenames)
 
             cull_limit -= len(filenames)
@@ -659,12 +659,12 @@ class Cache(CacheProtocol):
             )
             return
 
-        rows_fetch = await session.execute(select_stmt, {"limit": cull_limit})
+        rows_fetch = await connection.execute(select_stmt, {"limit": cull_limit})
         rows = rows_fetch.all()
 
         if rows:
             logger.debug("Culling cleanup files: %d", len(rows), stacklevel=stacklevel)
-            await session.execute(
+            await connection.execute(
                 sa.delete(CacheTable).where(
                     CacheTable.id.in_(
                         select_stmt.with_only_columns(CacheTable.id).scalar_subquery()
@@ -678,11 +678,11 @@ class Cache(CacheProtocol):
     @context
     @override
     def volume(self) -> int:
-        with self.conn.connect() as session:
-            page_count: int = session.execute(
+        with self.conn.connect() as sa_conn:
+            page_count: int = sa_conn.execute(
                 sa.text("PRAGMA page_count;")
             ).scalar_one()
-            size: int = session.execute(
+            size: int = sa_conn.execute(
                 sa.select(Metadata.value).where(Metadata.key == MetadataKey.SIZE)
             ).scalar_one()
 
@@ -691,9 +691,9 @@ class Cache(CacheProtocol):
     @context
     @override
     async def avolume(self) -> int:
-        async with self.conn.aconnect() as session:
-            page_count_fetch = await session.execute(sa.text("PRAGMA page_count;"))
-            size_fetch = await session.execute(
+        async with self.conn.aconnect() as sa_conn:
+            page_count_fetch = await sa_conn.execute(sa.text("PRAGMA page_count;"))
+            size_fetch = await sa_conn.execute(
                 sa.select(Metadata.value).where(Metadata.key == MetadataKey.SIZE)
             )
             page_count: int = page_count_fetch.scalar_one()
@@ -791,10 +791,10 @@ class Cache(CacheProtocol):
         expire_time = None if expire is None else now + expire
 
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=retry) as (
-            session,
+            sa_conn,
             _,
         ):
-            row = session.execute(
+            row = sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == db_key, CacheTable.raw == raw
                 )
@@ -806,7 +806,7 @@ class Cache(CacheProtocol):
 
             if row.expire_time is None or row.expire_time > now:
                 logger.debug("Touch key `%s`", key)
-                session.execute(
+                sa_conn.execute(
                     sa.update(CacheTable)
                     .where(CacheTable.id == row.id)
                     .values(expire_time=expire_time)
@@ -826,8 +826,8 @@ class Cache(CacheProtocol):
 
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry
-        ) as (session, _):
-            row_fetch = await session.execute(
+        ) as (sa_conn, _):
+            row_fetch = await sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == db_key, CacheTable.raw == raw
                 )
@@ -840,7 +840,7 @@ class Cache(CacheProtocol):
 
             if row.expire_time is None or row.expire_time > now:
                 logger.debug("Touch key `%s`", key)
-                await session.execute(
+                await sa_conn.execute(
                     sa.update(CacheTable)
                     .where(CacheTable.id == row.id)
                     .values(expire_time=expire_time)
@@ -866,8 +866,8 @@ class Cache(CacheProtocol):
 
         with default_utils.transact(
             conn=self.conn, disk=self.disk, retry=retry, filename=instance.filepath
-        ) as (session, cleanup):
-            row = session.execute(
+        ) as (sa_conn, cleanup):
+            row = sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == instance.key, CacheTable.raw == instance.raw
                 )
@@ -894,8 +894,8 @@ class Cache(CacheProtocol):
                 filepath=(instance.filepath, full_path),
                 instance_tags=instance_tags,
             )
-            default_utils.merge_cache(instance, instance_tags, session)
-            self._cull(instance.access_time, session, cleanup)
+            default_utils.merge_cache(instance, instance_tags, sa_conn)
+            self._cull(instance.access_time, sa_conn, cleanup)
 
             return True
 
@@ -916,8 +916,8 @@ class Cache(CacheProtocol):
 
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry, filename=instance.filepath
-        ) as (session, cleanup):
-            row_fetch = await session.execute(
+        ) as (sa_conn, cleanup):
+            row_fetch = await sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == instance.key, CacheTable.raw == instance.raw
                 )
@@ -945,8 +945,8 @@ class Cache(CacheProtocol):
                 filepath=(instance.filepath, full_path),
                 instance_tags=instance_tags,
             )
-            await default_utils.async_merge_cache(instance, instance_tags, session)
-            await self._async_cull(instance.access_time, session, cleanup)
+            await default_utils.async_merge_cache(instance, instance_tags, sa_conn)
+            await self._async_cull(instance.access_time, sa_conn, cleanup)
 
             return True
 
@@ -965,10 +965,10 @@ class Cache(CacheProtocol):
     ) -> Container[Any]:
         select_stmt = default_utils.prepare_get_stmt(self.disk, key)
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=retry) as (
-            session,
+            sa_conn,
             _,
         ):
-            row = session.execute(
+            row = sa_conn.execute(
                 select_stmt, {"expire_time": time.time()}
             ).one_or_none()
 
@@ -976,7 +976,7 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` not found", key)
                 return cache_utils.wrap_default(default)
 
-            session.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
 
             try:
                 value = self.disk.fetch(
@@ -991,7 +991,7 @@ class Cache(CacheProtocol):
                     self.disk.remove(row.filepath)
 
             logger.debug("Key `%s` found", key)
-            return cache_utils.wrap_instnace(key, value, row, session)
+            return cache_utils.wrap_instnace(key, value, row, sa_conn)
 
     @overload
     async def apop(
@@ -1009,8 +1009,8 @@ class Cache(CacheProtocol):
         select_stmt = default_utils.prepare_get_stmt(self.disk, key)
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry
-        ) as (session, _):
-            row_fetch = await session.execute(
+        ) as (sa_conn, _):
+            row_fetch = await sa_conn.execute(
                 select_stmt.options(sa_orm.joinedload(CacheTable.tags)),
                 {"expire_time": time.time()},
             )
@@ -1020,7 +1020,7 @@ class Cache(CacheProtocol):
                 logger.debug("Key `%s` not found", key)
                 return cache_utils.wrap_default(default)
 
-            await session.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
 
             try:
                 value = await self.disk.afetch(
@@ -1035,7 +1035,7 @@ class Cache(CacheProtocol):
                     await self.disk.aremove(row.filepath)
 
             logger.debug("Key `%s` found", key)
-            return await cache_utils.async_wrap_instnace(key, value, row, session)
+            return await cache_utils.async_wrap_instnace(key, value, row, sa_conn)
 
     @context
     @override
@@ -1056,8 +1056,8 @@ class Cache(CacheProtocol):
         lower_bound = 0
         tags_count = len(tags)
         while True:
-            with self.conn.connect() as session:
-                rows = session.execute(
+            with self.conn.connect() as sa_conn:
+                rows = sa_conn.execute(
                     stmt,
                     {
                         "lower_bound": lower_bound,
@@ -1093,8 +1093,8 @@ class Cache(CacheProtocol):
         lower_bound = 0
         tags_count = len(tags)
         while True:
-            async with self.conn.aconnect() as session:
-                rows_fetch = await session.execute(
+            async with self.conn.aconnect() as sa_conn:
+                rows_fetch = await sa_conn.execute(
                     stmt,
                     {
                         "lower_bound": lower_bound,
@@ -1121,10 +1121,10 @@ class Cache(CacheProtocol):
         db_key, raw = self.disk.put(key)
 
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=retry) as (
-            session,
+            sa_conn,
             cleanup,
         ):
-            row = session.execute(
+            row = sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == db_key, CacheTable.raw == raw
                 )
@@ -1151,8 +1151,8 @@ class Cache(CacheProtocol):
                     filepath=(instance.filepath, full_path),
                     instance_tags=instance_tags,
                 )
-                default_utils.merge_cache(instance, instance_tags, session)
-                self._cull(instance.access_time, session, cleanup)
+                default_utils.merge_cache(instance, instance_tags, sa_conn)
+                self._cull(instance.access_time, sa_conn, cleanup)
                 return value
 
             if row.expire_time is not None and row.expire_time < now:
@@ -1181,8 +1181,8 @@ class Cache(CacheProtocol):
                     filepath=(instance.filepath, full_path),
                     instance_tags=instance_tags,
                 )
-                default_utils.merge_cache(instance, instance_tags, session)
-                self._cull(instance.access_time, session, cleanup)
+                default_utils.merge_cache(instance, instance_tags, sa_conn)
+                self._cull(instance.access_time, sa_conn, cleanup)
                 return value
 
             value = self.disk.fetch(
@@ -1196,7 +1196,7 @@ class Cache(CacheProtocol):
             update_stmt = self.conn.eviction.get
             if update_stmt is not None:
                 logger.debug("Update eviction metadata")
-                session.execute(
+                sa_conn.execute(
                     update_stmt,
                     {
                         "id": row.id,
@@ -1206,7 +1206,7 @@ class Cache(CacheProtocol):
                 )
 
             row.store_time = now
-            default_utils.merge_cache(row, set(), session)
+            default_utils.merge_cache(row, set(), sa_conn)
             if origin_filepath:
                 cleanup([origin_filepath])
 
@@ -1222,8 +1222,8 @@ class Cache(CacheProtocol):
 
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry
-        ) as (session, cleanup):
-            row_fetch = await session.execute(
+        ) as (sa_conn, cleanup):
+            row_fetch = await sa_conn.execute(
                 sa.select(CacheTable).where(
                     CacheTable.key == db_key, CacheTable.raw == raw
                 )
@@ -1251,8 +1251,8 @@ class Cache(CacheProtocol):
                     filepath=(instance.filepath, full_path),
                     instance_tags=instance_tags,
                 )
-                await default_utils.async_merge_cache(instance, instance_tags, session)
-                await self._async_cull(instance.access_time, session, cleanup)
+                await default_utils.async_merge_cache(instance, instance_tags, sa_conn)
+                await self._async_cull(instance.access_time, sa_conn, cleanup)
                 return value
 
             if row.expire_time is not None and row.expire_time < now:
@@ -1281,8 +1281,8 @@ class Cache(CacheProtocol):
                     filepath=(instance.filepath, full_path),
                     instance_tags=instance_tags,
                 )
-                await default_utils.async_merge_cache(instance, instance_tags, session)
-                await self._async_cull(instance.access_time, session, cleanup)
+                await default_utils.async_merge_cache(instance, instance_tags, sa_conn)
+                await self._async_cull(instance.access_time, sa_conn, cleanup)
                 return value
 
             value = await self.disk.afetch(
@@ -1296,7 +1296,7 @@ class Cache(CacheProtocol):
             update_stmt = self.conn.eviction.get
             if update_stmt is not None:
                 logger.debug("Update eviction metadata")
-                await session.execute(
+                await sa_conn.execute(
                     update_stmt,
                     {
                         "id": row.id,
@@ -1306,7 +1306,7 @@ class Cache(CacheProtocol):
                 )
 
             row.store_time = now
-            await default_utils.async_merge_cache(row, set(), session)
+            await default_utils.async_merge_cache(row, set(), sa_conn)
             if origin_filepath:
                 await cleanup([origin_filepath])
 
@@ -1422,15 +1422,15 @@ class Cache(CacheProtocol):
             while self.volume() > self.settings.size_limit:
                 with default_utils.transact(
                     conn=self.conn, disk=self.disk, retry=retry
-                ) as (session, cleanup):
-                    rows = session.execute(select_stmt, {"limit": 10}).scalars().all()
+                ) as (sa_conn, cleanup):
+                    rows = sa_conn.execute(select_stmt, {"limit": 10}).scalars().all()
 
                     if not rows:
                         logger.debug("No more items to cull")
                         break
 
                     count += len(rows)
-                    session.execute(delete_stmt, {"limit": 10})
+                    sa_conn.execute(delete_stmt, {"limit": 10})
 
                     cleanup(rows)
         except TimeoutError as exc:
@@ -1464,8 +1464,8 @@ class Cache(CacheProtocol):
             while await self.avolume() > self.settings.size_limit:
                 async with default_utils.async_transact(
                     conn=self.conn, disk=self.disk, retry=retry
-                ) as (session, cleanup):
-                    rows_fetch = await session.execute(select_stmt, {"limit": 10})
+                ) as (sa_conn, cleanup):
+                    rows_fetch = await sa_conn.execute(select_stmt, {"limit": 10})
                     rows = rows_fetch.scalars().all()
 
                     if not rows:
@@ -1473,7 +1473,7 @@ class Cache(CacheProtocol):
                         break
 
                     count += len(rows)
-                    await session.execute(delete_stmt, {"limit": 10})
+                    await sa_conn.execute(delete_stmt, {"limit": 10})
 
                     await cleanup(rows)
         except TimeoutError as exc:
@@ -1500,8 +1500,8 @@ class Cache(CacheProtocol):
 
         with default_utils.transact(
             conn=self.conn, disk=self.disk, retry=retry, filename=filename
-        ) as (session, cleanup):
-            db_key = session.scalars(stmt).one_or_none()
+        ) as (sa_conn, cleanup):
+            db_key = sa_conn.scalars(stmt).one_or_none()
             cache_key = default_utils.find_push_key(
                 prefix=prefix, db_key=db_key, side=side
             )
@@ -1520,8 +1520,8 @@ class Cache(CacheProtocol):
                 access_count=0,
             )
             instance_tags = {TagTable(name=tag) for tag in (tags or [])}
-            default_utils.merge_cache(instance, instance_tags, session)
-            self._cull(now, session, cleanup)
+            default_utils.merge_cache(instance, instance_tags, sa_conn)
+            self._cull(now, sa_conn, cleanup)
 
             return cache_key
 
@@ -1544,8 +1544,8 @@ class Cache(CacheProtocol):
 
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=retry, filename=filename
-        ) as (session, cleanup):
-            db_key_fetch = await session.scalars(stmt)
+        ) as (sa_conn, cleanup):
+            db_key_fetch = await sa_conn.scalars(stmt)
             db_key = db_key_fetch.one_or_none()
             cache_key = default_utils.find_push_key(
                 prefix=prefix, db_key=db_key, side=side
@@ -1565,8 +1565,8 @@ class Cache(CacheProtocol):
                 access_count=0,
             )
             instance_tags = {TagTable(name=tag) for tag in (tags or [])}
-            await default_utils.async_merge_cache(instance, instance_tags, session)
-            await self._async_cull(now, session, cleanup)
+            await default_utils.async_merge_cache(instance, instance_tags, sa_conn)
+            await self._async_cull(now, sa_conn, cleanup)
 
             return cache_key
 
@@ -1857,15 +1857,15 @@ class Cache(CacheProtocol):
             default_utils.check_integrity(conn=self.conn, fix=fix, stacklevel=2)
             with default_utils.transact(
                 conn=self.conn, disk=self.disk, retry=retry
-            ) as (session, _):
+            ) as (sa_conn, _):
                 default_utils.check_files(
-                    session=session, directory=self.directory, fix=fix, stacklevel=2
+                    connection=sa_conn, directory=self.directory, fix=fix, stacklevel=2
                 )
                 default_utils.check_metadata_count(
-                    session=session, fix=fix, stacklevel=2
+                    connection=sa_conn, fix=fix, stacklevel=2
                 )
                 default_utils.check_metadata_size(
-                    session=session, fix=fix, stacklevel=2
+                    connection=sa_conn, fix=fix, stacklevel=2
                 )
 
         return warns
@@ -1880,15 +1880,15 @@ class Cache(CacheProtocol):
 
             async with default_utils.async_transact(
                 conn=self.conn, disk=self.disk, retry=retry
-            ) as (session, _):
+            ) as (sa_conn, _):
                 await default_utils.acheck_files(
-                    session=session, directory=self.directory, fix=fix, stacklevel=2
+                    connection=sa_conn, directory=self.directory, fix=fix, stacklevel=2
                 )
                 await default_utils.acheck_metadata_count(
-                    session=session, fix=fix, stacklevel=2
+                    connection=sa_conn, fix=fix, stacklevel=2
                 )
                 await default_utils.acheck_metadata_size(
-                    session=session, fix=fix, stacklevel=2
+                    connection=sa_conn, fix=fix, stacklevel=2
                 )
 
         return warns
@@ -1897,8 +1897,8 @@ class Cache(CacheProtocol):
     @override
     def iterkeys(self, *, reverse: bool = False) -> Generator[Any, None, None]:
         select_stmt, iter_stmt = default_utils.prepare_iterkeys_stmt(reverse=reverse)
-        with self.conn.connect() as session:
-            row = session.execute(select_stmt).one_or_none()
+        with self.conn.connect() as sa_conn:
+            row = sa_conn.execute(select_stmt).one_or_none()
 
             if not row:
                 return
@@ -1906,7 +1906,7 @@ class Cache(CacheProtocol):
             yield self.disk.get(row.key, raw=row.raw)
 
             while True:
-                rows = session.execute(
+                rows = sa_conn.execute(
                     iter_stmt,
                     {"iter_key": row.key, "iter_raw": row.raw, "chunksize": 100},
                 ).all()
@@ -1921,8 +1921,8 @@ class Cache(CacheProtocol):
     @override
     async def aiterkeys(self, *, reverse: bool = False) -> AsyncGenerator[Any, None]:
         select_stmt, iter_stmt = default_utils.prepare_iterkeys_stmt(reverse=reverse)
-        async with self.conn.aconnect() as session:
-            row_fetch = await session.execute(select_stmt)
+        async with self.conn.aconnect() as sa_conn:
+            row_fetch = await sa_conn.execute(select_stmt)
             row = row_fetch.one_or_none()
 
             if not row:
@@ -1931,7 +1931,7 @@ class Cache(CacheProtocol):
             yield self.disk.get(row.key, raw=row.raw)
 
             while True:
-                rows_fetch = await session.execute(
+                rows_fetch = await sa_conn.execute(
                     iter_stmt,
                     {"iter_key": row.key, "iter_raw": row.raw, "chunksize": 100},
                 )
@@ -1961,12 +1961,12 @@ class Cache(CacheProtocol):
 
         settings, update_settings, update_stmt = update_args
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=True) as (
-            session,
+            sa_conn,
             _,
         ):
             for key, value in update_settings.items():
                 logger.debug("Update setting `%s` to `%s`", key, value)
-                session.execute(
+                sa_conn.execute(
                     update_stmt, {"settings_key": key, "settings_value": value}
                 )
 
@@ -1992,10 +1992,10 @@ class Cache(CacheProtocol):
         settings, update_settings, update_stmt = update_args
         async with default_utils.async_transact(
             conn=self.conn, disk=self.disk, retry=True
-        ) as (session, _):
+        ) as (sa_conn, _):
             for key, value in update_settings.items():
                 logger.debug("Update setting `%s` to `%s`", key, value)
-                await session.execute(
+                await sa_conn.execute(
                     update_stmt, {"settings_key": key, "settings_value": value}
                 )
 

@@ -120,8 +120,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
             ```
         """
         self._maxlen = value
-        with self.cache.conn.connect() as session:
-            with transact(session):
+        with self.cache.conn.connect() as sa_conn:
+            with transact(sa_conn):
                 while len(self.cache) > self._maxlen:
                     self.popleft()
 
@@ -147,8 +147,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['a', 'b', 'c']
             ```
         """
-        with self.cache.conn.connect() as session:
-            with transact(session):
+        with self.cache.conn.connect() as sa_conn:
+            with transact(sa_conn):
                 self.cache.push(value, side="back", retry=True)
                 if len(self.cache) > self._maxlen:
                     self.popleft()
@@ -174,8 +174,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['c', 'b', 'a']
             ```
         """
-        with self.cache.conn.connect() as session:
-            with transact(session):
+        with self.cache.conn.connect() as sa_conn:
+            with transact(sa_conn):
                 self.cache.push(value, side="front", retry=True)
                 if len(self.cache) > self._maxlen:
                     self.pop()

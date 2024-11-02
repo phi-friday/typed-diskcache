@@ -62,13 +62,13 @@ def init_args(
         sync_scopefunc=get_log_context,
         async_scopefunc=get_log_context,
     )
-    with conn.connect() as session:
-        revision_auto(session)
+    with conn.connect() as sa_conn:
+        revision_auto(sa_conn)
 
-    with conn.connect() as session:
+    with conn.connect() as sa_conn:
         logger.debug("Checking for existing cache settings")
         try:
-            setting_records = session.execute(sa.select(SettingsTable)).all()
+            setting_records = sa_conn.execute(sa.select(SettingsTable)).all()
         except OperationalError:
             logger.debug("No existing cache settings found")
             setting_records = []
@@ -127,8 +127,8 @@ def init_args(
     conn.update_settings(settings)
     conn.timeout = float(timeout)
 
-    with conn.connect() as session:
-        page_size = session.execute(sa.text("PRAGMA page_size;")).scalar_one()
+    with conn.connect() as sa_conn:
+        page_size = sa_conn.execute(sa.text("PRAGMA page_size;")).scalar_one()
 
     return disk, conn, settings, page_size
 
@@ -141,13 +141,13 @@ def wrap_instnace(
     key: Any,
     value: _T,
     cache: CacheTable | sa.Row[tuple[CacheTable]],
-    session_or_tags: SAConnection | set[str],
+    connection_or_tags: SAConnection | set[str],
 ) -> Container[_T]:
-    if isinstance(session_or_tags, set):
-        tags = frozenset(session_or_tags)
+    if isinstance(connection_or_tags, set):
+        tags = frozenset(connection_or_tags)
     else:
         tags = (
-            session_or_tags.execute(
+            connection_or_tags.execute(
                 sa.select(TagTable.name)
                 .select_from(
                     sa.join(
@@ -169,12 +169,12 @@ async def async_wrap_instnace(
     key: Any,
     value: _T,
     cache: CacheTable | sa.Row[tuple[CacheTable]],
-    session_or_tags: AsyncConnection | set[str],
+    connection_or_tags: AsyncConnection | set[str],
 ) -> Container[_T]:
-    if isinstance(session_or_tags, set):
-        tags = frozenset(session_or_tags)
+    if isinstance(connection_or_tags, set):
+        tags = frozenset(connection_or_tags)
     else:
-        tags_fetch = await session_or_tags.execute(
+        tags_fetch = await connection_or_tags.execute(
             sa.select(TagTable.name)
             .select_from(
                 sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)

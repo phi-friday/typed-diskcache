@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.engine import Connection
     from sqlalchemy.ext.asyncio import AsyncConnection
-    from sqlalchemy.orm import InstrumentedAttribute, Session
+    from sqlalchemy.orm import InstrumentedAttribute
 
 
 __all__ = ["Version", "Metadata", "Settings", "Cache"]
@@ -64,11 +64,11 @@ class Version(Base):
     revision: Mapped[str] = mapped_column(sa.String(100))
 
     @classmethod
-    def get(cls, session: Connection) -> str:
+    def get(cls, connection: Connection) -> str:
         """get revision id"""
         stmt = sa.select(cls.revision).where(cls.id == 1)
         try:
-            value = session.scalar(stmt)
+            value = connection.scalar(stmt)
         except OperationalError as exc:
             raise te.TypedDiskcacheValueError("there is no version table") from exc
 
@@ -77,11 +77,11 @@ class Version(Base):
         return value
 
     @classmethod
-    async def aget(cls, session: AsyncConnection) -> str:
+    async def aget(cls, connection: AsyncConnection) -> str:
         """get revision id"""
         stmt = sa.select(cls.revision).where(cls.id == 1)
         try:
-            value = await session.scalar(stmt)
+            value = await connection.scalar(stmt)
         except OperationalError as exc:
             raise te.TypedDiskcacheValueError("there is no version table") from exc
 
@@ -89,40 +89,38 @@ class Version(Base):
             raise te.TypedDiskcacheValueError("version table is empty")
         return value
 
-    def set(self, session: Connection) -> None:
+    def set(self, connection: Connection) -> None:
         """set revision id"""
         stmt = (
             sa.update(Version)
             .values(revision=self.revision)
             .where(Version.id == (self.id or 1))
         )
-        session.execute(stmt)
+        connection.execute(stmt)
         logger.debug("set revision id: `%s`", self.revision)
 
-    async def aset(self, session: AsyncConnection) -> None:
+    async def aset(self, connection: AsyncConnection) -> None:
         """set revision id"""
         stmt = (
             sa.update(Version)
             .values(revision=self.revision)
             .where(Version.id == (self.id or 1))
         )
-        await session.execute(stmt)
+        await connection.execute(stmt)
         logger.debug("set revision id: `%s`", self.revision)
 
     @classmethod
-    def delete(
-        cls, session: Session | Connection, version_id: int | None = None
-    ) -> None:
+    def delete(cls, connection: Connection, version_id: int | None = None) -> None:
         """delete version table"""
-        session.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
+        connection.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
         logger.debug("delete version id: `%s`", version_id or 1)
 
     @classmethod
     async def adelete(
-        cls, session: AsyncConnection, version_id: int | None = None
+        cls, connection: AsyncConnection, version_id: int | None = None
     ) -> None:
         """delete version table"""
-        await session.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
+        await connection.execute(sa.delete(cls).where(Version.id == (version_id or 1)))
         logger.debug("delete version id: `%s`", version_id or 1)
 
 
