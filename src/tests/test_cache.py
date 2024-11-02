@@ -62,10 +62,10 @@ class TestCache:
     def _init(self, cache_directory, cache_type, is_async):  # noqa: ANN202
         if cache_type == "cache":
             self.cache_type = "cache"
-            self.origin_cache = typed_diskcache.Cache(cache_directory)
+            self.origin_cache = typed_diskcache.Cache(cache_directory, timeout=5)
         elif cache_type == "fanoutcache":
             self.cache_type = "fanoutcache"
-            self.origin_cache = typed_diskcache.FanoutCache(cache_directory)
+            self.origin_cache = typed_diskcache.FanoutCache(cache_directory, timeout=5)
         else:
             error_msg = f"Unknown cache type: {cache_type}"
             raise RuntimeError(error_msg)
@@ -136,14 +136,14 @@ class TestCache:
         "value",
         [
             None,
-            (None,) * 2**20,
+            pytest.param((None,) * 2**20, id="tuple"),
             1234,
-            2**512,
+            pytest.param(2**512, id="big_int"),
             56.78,
             "hello",
-            "hello" * 2**20,
+            pytest.param("hello" * 2**20, id="big_str"),
             b"world",
-            b"world" * 2**20,
+            pytest.param(b"world" * 2**20, id="big_bytes"),
         ],
     )
     def test_getsetdel_item(self, value):
@@ -233,14 +233,14 @@ class TestCache:
         "value",
         [
             None,
-            (None,) * 2**20,
+            pytest.param((None,) * 2**20, id="tuple"),
             1234,
-            2**512,
+            pytest.param(2**512, id="big_int"),
             56.78,
             "hello",
-            "hello" * 2**20,
+            pytest.param("hello" * 2**20, id="big_str"),
             b"world",
-            b"world" * 2**20,
+            pytest.param(b"world" * 2**20, id="big_bytes"),
         ],
     )
     async def test_getsetdel(self, value):
@@ -411,7 +411,6 @@ class TestCache:
         select = set(self.origin_cache.filter(tags, method=method))
         assert select == set(expected)
 
-    @pytest.mark.only
     @pytest.mark.parametrize(
         ("tags", "method", "expected"),
         [

@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import threading
 from contextlib import asynccontextmanager, contextmanager, suppress
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
-from sqlalchemy.util import ScopedRegistry
 
 from typed_diskcache import exception as te
-from typed_diskcache.core.context import log_context, override_context
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
@@ -120,15 +117,6 @@ class Connection:
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
     @cached_property
-    def _sync_registry(self) -> ScopedRegistry[SAConnection]:
-        scope_func = (
-            threading.get_native_id
-            if self._sync_scopefunc is None
-            else self._sync_scopefunc
-        )
-        return ScopedRegistry(self._sync_engine.connect, scopefunc=scope_func)
-
-    @cached_property
     def _async_engine(self) -> AsyncEngine:
         engine = db_connect.ensure_sqlite_async_engine(self._async_url)
         if self._settings is None:
@@ -136,58 +124,17 @@ class Connection:
 
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
-    @cached_property
-    def _async_registry(self) -> ScopedRegistry[AsyncConnection]:
-        scope_func = (
-            threading.get_native_id
-            if self._async_scopefunc is None
-            else self._async_scopefunc
-        )
-        return ScopedRegistry(self._async_engine.connect, scopefunc=scope_func)
-
     @contextmanager
     def connect(self) -> Generator[SAConnection, None, None]:
         """Connect to the database."""
-        connection = self._sync_registry()
-        if connection.closed:
-            self._sync_registry.clear()
-            connection = self._sync_registry()
-        try:
+        with self._sync_engine.connect() as connection:
             yield connection
-        finally:
-            context = override_context.get()
-            if context is None:
-                connection.close()
-                self._sync_registry.clear()
-            else:
-                log_context_value = log_context.get()
-                if log_context_value == context:
-                    connection.close()
-                    self._sync_registry.clear()
 
     @asynccontextmanager
     async def aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
         """Connect to the database."""
-        connection = self._async_registry()
-        if connection.sync_connection is None:
-            await connection.start()
-        if connection.closed:
-            self._async_registry.clear()
-            connection = self._async_registry()
-            if connection.sync_connection is None:
-                await connection.start()
-        try:
+        async with self._async_engine.connect() as connection:
             yield connection
-        finally:
-            context = override_context.get()
-            if context is None:
-                await connection.close()
-                self._sync_registry.clear()
-            else:
-                log_context_value = log_context.get()
-                if log_context_value == context:
-                    await connection.close()
-                    self._sync_registry.clear()
 
     def close(self) -> None:
         """Close the connection."""

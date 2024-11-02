@@ -73,8 +73,7 @@ class SyncLock(SyncLockProtocol):
     def locked(self) -> bool:
         return self.key in self._cache
 
-    @context("SyncLock.acquire", override=True)
-    @context("SyncLock.acquire")
+    @context
     @override
     def acquire(self) -> None:
         start = time.monotonic()
@@ -90,8 +89,7 @@ class SyncLock(SyncLockProtocol):
 
         raise te.TypedDiskcacheTimeoutError("lock acquire timeout")
 
-    @context("SyncLock.release", override=True)
-    @context("SyncLock.release")
+    @context
     @override
     def release(self) -> None:
         self._cache.delete(self.key, retry=True)
@@ -113,8 +111,7 @@ class SyncLock(SyncLockProtocol):
 class SyncRLock(SyncLock):
     """Re-entrant lock implementation using spin-lock algorithm."""
 
-    @context("SyncRLock.acquire", override=True)
-    @context("SyncRLock.acquire")
+    @context
     @override
     def acquire(self) -> None:
         pid = os.getpid()
@@ -125,7 +122,7 @@ class SyncRLock(SyncLock):
 
         with ExitStack() as stack:
             while timeout < self.timeout:
-                session = stack.enter_context(self._cache.conn.sync_session)
+                session = stack.enter_context(self._cache.conn.connect())
                 stack.enter_context(transact(session))
                 container = self._cache.get(self.key, default=("default", 0))
                 container_value = validate_lock_value(container.value)
@@ -142,8 +139,7 @@ class SyncRLock(SyncLock):
 
         raise te.TypedDiskcacheTimeoutError("lock acquire timeout")
 
-    @context("SyncRLock.release", override=True)
-    @context("SyncRLock.release")
+    @context
     @override
     def release(self) -> None:
         pid = os.getpid()
@@ -151,7 +147,7 @@ class SyncRLock(SyncLock):
         pid_tid = f"{pid}-{tid}"
 
         with ExitStack() as stack:
-            session = stack.enter_context(self._cache.conn.sync_session)
+            session = stack.enter_context(self._cache.conn.connect())
             stack.enter_context(transact(session))
             container = self._cache.get(self.key, default=("default", 0))
             container_value = validate_lock_value(container.value)
@@ -220,8 +216,7 @@ class AsyncLock(AsyncLockProtocol):
     def locked(self) -> bool:
         return self.key in self._cache
 
-    @context("AsyncLock.acquire", override=True)
-    @context("AsyncLock.acquire")
+    @context
     @override
     async def acquire(self) -> None:
         import anyio
@@ -238,8 +233,7 @@ class AsyncLock(AsyncLockProtocol):
         except TimeoutError as exc:
             raise te.TypedDiskcacheTimeoutError("lock acquire timeout") from exc
 
-    @context("AsyncLock.release", override=True)
-    @context("AsyncLock.release")
+    @context
     @override
     async def release(self) -> None:
         await self._cache.adelete(self.key, retry=True)
@@ -261,8 +255,7 @@ class AsyncLock(AsyncLockProtocol):
 class AsyncRLock(AsyncLock):
     """Re-entrant lock implementation using spin-lock algorithm."""
 
-    @context("AsyncRLock.acquire", override=True)
-    @context("AsyncRLock.acquire")
+    @context
     @override
     async def acquire(self) -> None:
         import anyio
@@ -277,7 +270,7 @@ class AsyncRLock(AsyncLock):
                 sub_stack = await stack.enter_async_context(AsyncExitStack())
                 while True:
                     session = await sub_stack.enter_async_context(
-                        self._cache.conn.async_session
+                        self._cache.conn.aconnect()
                     )
                     await sub_stack.enter_async_context(transact(session))
                     container = await self._cache.aget(self.key, default=("default", 0))
@@ -297,8 +290,7 @@ class AsyncRLock(AsyncLock):
         except TimeoutError as exc:
             raise te.TypedDiskcacheTimeoutError("lock acquire timeout") from exc
 
-    @context("AsyncRLock.release", override=True)
-    @context("AsyncRLock.release")
+    @context
     @override
     async def release(self) -> None:
         """Release lock by decrementing count."""
@@ -307,7 +299,7 @@ class AsyncRLock(AsyncLock):
         pid_tid = f"{pid}-{tid}"
 
         async with AsyncExitStack() as stack:
-            session = await stack.enter_async_context(self._cache.conn.async_session)
+            session = await stack.enter_async_context(self._cache.conn.aconnect())
             await stack.enter_async_context(transact(session))
             container = await self._cache.aget(self.key, default=("default", 0))
             container_value = validate_lock_value(container.value)

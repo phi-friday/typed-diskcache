@@ -11,7 +11,7 @@ from typing_extensions import TypeVar
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DBNAME
-from typed_diskcache.core.context import log_context, override_context
+from typed_diskcache.core.context import log_context
 from typed_diskcache.core.types import Container, SettingsKey, SettingsKwargs
 from typed_diskcache.database import Connection
 from typed_diskcache.database.connect import transact as database_transact
@@ -189,9 +189,6 @@ async def async_wrap_instnace(
 
 
 def get_log_context() -> tuple[str, int]:
-    override_value = override_context.get()
-    if override_value is not None:
-        return override_value
     return log_context.get()
 
 

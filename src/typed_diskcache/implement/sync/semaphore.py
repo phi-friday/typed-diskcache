@@ -73,15 +73,14 @@ class SyncSemaphore(SyncSemaphoreProtocol):
     def tags(self) -> frozenset[str]:
         return self._tags
 
-    @context("SyncSemaphore.acquire", override=True)
-    @context("SyncSemaphore.acquire")
+    @context
     @override
     def acquire(self) -> None:
         start = time.monotonic()
         timeout = 0
         with ExitStack() as stack:
             while timeout < self.timeout:
-                session = stack.enter_context(self._cache.conn.sync_session)
+                session = stack.enter_context(self._cache.conn.connect())
                 stack.enter_context(transact(session))
                 container = self._cache.get(self.key, default=self._value)
                 container_value = validate_semaphore_value(container.value)
@@ -99,12 +98,11 @@ class SyncSemaphore(SyncSemaphoreProtocol):
 
         raise te.TypedDiskcacheTimeoutError("lock acquire timeout")
 
-    @context("SyncSemaphore.release", override=True)
-    @context("SyncSemaphore.release")
+    @context
     @override
     def release(self) -> None:
         with ExitStack() as stack:
-            session = stack.enter_context(self._cache.conn.sync_session)
+            session = stack.enter_context(self._cache.conn.connect())
             stack.enter_context(transact(session))
             container = self._cache.get(self.key, default=self._value)
             container_value = validate_semaphore_value(container.value)
@@ -182,8 +180,7 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
     def tags(self) -> frozenset[str]:
         return self._tags
 
-    @context("AsyncSemaphore.acquire", override=True)
-    @context("AsyncSemaphore.acquire")
+    @context
     @override
     async def acquire(self) -> None:
         import anyio
@@ -194,7 +191,7 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
                 sub_stack = await stack.enter_async_context(AsyncExitStack())
                 while True:
                     session = await sub_stack.enter_async_context(
-                        self._cache.conn.async_session
+                        self._cache.conn.aconnect()
                     )
                     await sub_stack.enter_async_context(transact(session))
                     container = await self._cache.aget(self.key, default=self._value)
@@ -212,12 +209,11 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         except TimeoutError as exc:
             raise te.TypedDiskcacheTimeoutError("lock acquire timeout") from exc
 
-    @context("AsyncSemaphore.release", override=True)
-    @context("AsyncSemaphore.release")
+    @context
     @override
     async def release(self) -> None:
         async with AsyncExitStack() as stack:
-            session = await stack.enter_async_context(self._cache.conn.async_session)
+            session = await stack.enter_async_context(self._cache.conn.aconnect())
             await stack.enter_async_context(transact(session))
             container = await self._cache.aget(self.key, default=self._value)
             container_value = validate_semaphore_value(container.value)

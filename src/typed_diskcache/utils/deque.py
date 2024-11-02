@@ -97,7 +97,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         return self._maxlen
 
     @maxlen.setter
-    @context("Deque.maxlen", override=True)
+    @context("Deque.maxlen")
     def maxlen(self, value: float) -> None:
         """Set max length of the deque.
 
@@ -120,12 +120,12 @@ class Deque(MutableSequence[_T], Generic[_T]):
             ```
         """
         self._maxlen = value
-        with self.cache.conn.sync_session as session:
+        with self.cache.conn.connect() as session:
             with transact(session):
                 while len(self.cache) > self._maxlen:
                     self.popleft()
 
-    @context("Deque.append", override=True)
+    @context("Deque.append")
     @override
     def append(self, value: _T) -> None:
         """Add `value` to back of deque.
@@ -147,13 +147,13 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['a', 'b', 'c']
             ```
         """
-        with self.cache.conn.sync_session as session:
+        with self.cache.conn.connect() as session:
             with transact(session):
                 self.cache.push(value, side="back", retry=True)
                 if len(self.cache) > self._maxlen:
                     self.popleft()
 
-    @context("Deque.appendleft", override=True)
+    @context("Deque.appendleft")
     def appendleft(self, value: _T) -> None:
         """Add `value` to front of deque.
 
@@ -174,7 +174,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['c', 'b', 'a']
             ```
         """
-        with self.cache.conn.sync_session as session:
+        with self.cache.conn.connect() as session:
             with transact(session):
                 self.cache.push(value, side="front", retry=True)
                 if len(self.cache) > self._maxlen:
@@ -215,7 +215,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         return sum(1 for item in self if item == value)
 
-    @context("Deque.extend", override=True)
+    @context("Deque.extend")
     @override
     def extend(self, values: Iterable[_T]) -> None:
         """Extend back side of deque with values from `iterable`.
@@ -238,7 +238,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         for value in values:
             self.append(value)
 
-    @context("Deque.extendleft", override=True)
+    @context("Deque.extendleft")
     def extendleft(self, values: Iterable[_T]) -> None:
         """Extend front side of deque with values from `iterable`.
 
