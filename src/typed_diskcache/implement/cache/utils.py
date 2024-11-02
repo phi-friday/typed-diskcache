@@ -12,7 +12,7 @@ from typing_extensions import TypeVar
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DBNAME
 from typed_diskcache.core.context import log_context, override_context
-from typed_diskcache.core.types import Container, SettingsKey
+from typed_diskcache.core.types import Container, SettingsKey, SettingsKwargs
 from typed_diskcache.database import Connection
 from typed_diskcache.database.connect import transact as database_transact
 from typed_diskcache.database.model import Cache as CacheTable
@@ -75,12 +75,7 @@ def init_args(
     disk_in_settings = SettingsKey.SERIALIZED_DISK in db_settings
     db_settings |= kwargs
 
-    sqlite_settings = SQLiteSettings.model_validate({
-        key: value for key, value in db_settings.items() if key.startswith("sqlite_")
-    })
-    settings = Settings.model_validate(
-        db_settings | {"sqlite_settings": sqlite_settings}
-    )
+    settings = kwargs_to_settings(db_settings)
     logger.debug("Cache settings: %r", settings)
 
     if disk_in_settings:
@@ -154,3 +149,36 @@ def get_log_context() -> tuple[str, int]:
     if override_value is not None:
         return override_value
     return log_context.get()
+
+
+def combine_settings(
+    settings: Settings | SettingsKwargs | None, kwargs: SettingsKwargs
+) -> Settings:
+    if not isinstance(settings, Settings):
+        settings = kwargs_to_settings(settings)
+
+    if not kwargs:
+        return settings
+
+    sqlite_kwargs = {
+        key.removeprefix("sqlite_"): value
+        for key, value in kwargs.items()
+        if key.startswith("sqlite_")
+    }
+    sqlite_settings = settings.sqlite_settings.model_copy(update=sqlite_kwargs)
+
+    return settings.model_copy(
+        update=dict(kwargs) | {"sqlite_settings": sqlite_settings}
+    )
+
+
+def kwargs_to_settings(settings: Mapping[str, Any] | None) -> Settings:
+    if not settings:
+        return Settings()
+
+    sqlite_settings = SQLiteSettings.model_validate({
+        key: value for key, value in settings.items() if key.startswith("sqlite_")
+    })
+    return Settings.model_validate(
+        dict(settings) | {"sqlite_settings": sqlite_settings}
+    )

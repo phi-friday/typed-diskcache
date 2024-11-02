@@ -1964,7 +1964,12 @@ class Cache(CacheProtocol):
 
     @context
     @override
-    def update_settings(self, settings: Settings) -> None:
+    def update_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = None,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
+        settings = cache_utils.combine_settings(settings, kwargs)
         update_args = default_utils.prepare_update_settings_args(
             self.settings, settings
         )
@@ -1989,7 +1994,12 @@ class Cache(CacheProtocol):
 
     @context
     @override
-    async def aupdate_settings(self, settings: Settings) -> None:
+    async def aupdate_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = None,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
+        settings = cache_utils.combine_settings(settings, kwargs)
         update_args = default_utils.prepare_update_settings_args(
             self.settings, settings
         )

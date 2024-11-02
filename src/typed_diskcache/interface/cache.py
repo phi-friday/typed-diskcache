@@ -1303,14 +1303,23 @@ class CacheProtocol(Protocol):
         """
         ...  # pragma: no cover
 
-    def update_settings(self, settings: Settings) -> None:
+    def update_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = ...,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
         """Update cache settings.
 
         Args:
             settings: New settings.
+            **kwargs: Additional settings.
         """
 
-    async def aupdate_settings(self, settings: Settings) -> None:
+    async def aupdate_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = ...,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
         """Async update cache settings.
 
         Asynchronous version of
@@ -1318,4 +1327,5 @@ class CacheProtocol(Protocol):
 
         Args:
             settings: New settings.
+            **kwargs: Additional settings.
         """

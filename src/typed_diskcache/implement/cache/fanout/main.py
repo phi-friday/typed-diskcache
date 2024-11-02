@@ -685,13 +685,23 @@ class FanoutCache(CacheProtocol):
         )
 
     @override
-    def update_settings(self, settings: Settings) -> None:
+    def update_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = None,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
+        settings = cache_utils.combine_settings(settings, kwargs)
         for shard in self._shards:
             shard.update_settings(settings)
         self._cache.update_settings(settings)
 
     @override
-    async def aupdate_settings(self, settings: Settings) -> None:
+    async def aupdate_settings(
+        self,
+        settings: Settings | SettingsKwargs | None = None,
+        **kwargs: Unpack[SettingsKwargs],
+    ) -> None:
+        settings = cache_utils.combine_settings(settings, kwargs)
         async with anyio.create_task_group() as task_group:
             for shard in self._shards:
                 task_group.start_soon(shard.aupdate_settings, settings)
