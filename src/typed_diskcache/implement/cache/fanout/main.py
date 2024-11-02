@@ -309,35 +309,30 @@ class FanoutCache(CacheProtocol):
     @override
     def stats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         hits, misses = 0, 0
-        first_shard = next(iter(self._shards))
-        shard_stats = first_shard.stats(enable=enable, reset=reset)
-        hits += shard_stats[0]
-        misses += shard_stats[1]
 
-        for shard in self._shards[1:]:
-            shard._settings = first_shard.settings  # noqa: SLF001
+        for shard in self._shards:
             shard_stats = shard.stats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
 
-        self._settings = first_shard.settings
+        self.update_settings(statistics=enable)
         return Stats(hits=hits, misses=misses)
 
     @override
     async def astats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         hits, misses = 0, 0
-        first_shard = next(iter(self._shards))
-        shard_stats = await first_shard.astats(enable=enable, reset=reset)
-        hits += shard_stats[0]
-        misses += shard_stats[1]
 
-        for shard in self._shards[1:]:
-            shard._settings = first_shard.settings  # noqa: SLF001
+        async def update_stats(shard: Shard) -> None:
+            nonlocal hits, misses
             shard_stats = await shard.astats(enable=enable, reset=reset)
             hits += shard_stats[0]
             misses += shard_stats[1]
 
-        self._settings = first_shard.settings
+        async with anyio.create_task_group() as task_group:
+            for shard in self._shards:
+                task_group.start_soon(update_stats, shard)
+            task_group.start_soon(partial(self.aupdate_settings, statistics=enable))
+
         return Stats(hits=hits, misses=misses)
 
     @override

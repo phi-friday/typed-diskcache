@@ -725,6 +725,7 @@ class Cache(CacheProtocol):
                 .scalars()
                 .one()
             )
+            stats = Stats(hits=hits.value, misses=misses.value)
 
             if reset:
                 session.execute(
@@ -749,7 +750,7 @@ class Cache(CacheProtocol):
                 self.settings.model_copy(update={"statistics": enable})
             )
 
-            return Stats(hits=hits.value, misses=misses.value)
+            return stats
 
     @context
     @override
@@ -765,6 +766,7 @@ class Cache(CacheProtocol):
             )
             hits = hits_fetch.scalars().one()
             misses = misses_fetch.scalars().one()
+            stats = Stats(hits=hits.value, misses=misses.value)
 
             if reset:
                 await session.execute(
@@ -786,7 +788,7 @@ class Cache(CacheProtocol):
                 self.settings.model_copy(update={"statistics": enable})
             )
 
-            return Stats(hits=hits.value, misses=misses.value)
+            return stats
 
     @override
     def close(self) -> None:
