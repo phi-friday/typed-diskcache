@@ -704,7 +704,7 @@ class Cache(CacheProtocol):
 
         return self._page_size * page_count + size
 
-    @context
+    @context("Cache.stats", override=True)
     @override
     def stats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         with default_utils.transact(conn=self.conn, disk=self.disk, retry=False) as (
@@ -745,13 +745,13 @@ class Cache(CacheProtocol):
             )
             statistic.value = enable
             session.add(statistic)
-            session.commit()
             self.update_settings(
                 self.settings.model_copy(update={"statistics": enable})
             )
 
             return stats
 
+    @context("Cache.astats", override=True)
     @context
     @override
     async def astats(self, *, enable: bool = True, reset: bool = False) -> Stats:
@@ -783,11 +783,9 @@ class Cache(CacheProtocol):
             statistic = statistic_fetch.scalars().one()
             statistic.value = enable
             session.add(statistic)
-            await session.commit()
             await self.aupdate_settings(
                 self.settings.model_copy(update={"statistics": enable})
             )
-
             return stats
 
     @override
