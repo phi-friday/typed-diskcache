@@ -4,6 +4,7 @@ import os
 import time
 import warnings
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
+from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -280,26 +281,14 @@ def extend_queue(
     return extend
 
 
-def load_tags(tags: set[TagTable], session: SAConnection) -> None:
-    db_tags = session.scalars(
-        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
-    ).all()
-    if not db_tags:
-        return
-
-    db_tags_map = {x.name: x for x in db_tags}
-    for tag in tags:
-        if tag.name not in db_tags_map:
-            continue
-        tag.id = db_tags_map[tag.name].id
-
-
 def merge_cache(
-    instance: CacheTable, tags: set[TagTable], sa_conn: SAConnection
+    instance: CacheTable | sa.Row[tuple[CacheTable]],
+    tags: set[TagTable],
+    sa_conn: SAConnection,
 ) -> None:
     if instance.id is None:
-        sa_conn.execute(
-            sa.insert(CacheTable),
+        instance_id = sa_conn.execute(
+            sa.insert(CacheTable).returning(CacheTable.id),
             {
                 "key": instance.key,
                 "raw": instance.raw,
@@ -312,9 +301,9 @@ def merge_cache(
                 "access_count": instance.access_count,
                 "size": instance.size,
             },
-        )
+        ).scalar_one()
     else:
-        sa_conn.execute(
+        instance_id = sa_conn.execute(
             sa.update(CacheTable)
             .where(CacheTable.id == instance.id)
             .values(
@@ -327,53 +316,44 @@ def merge_cache(
                 access_count=instance.access_count,
                 size=instance.size,
             )
-        )
-    if not tags:
-        sa_conn.execute(
-            sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance.id)
-        )
-        return
+            .returning(CacheTable.id)
+        ).scalar_one()
+
     sa_conn.execute(
-        sa.delete(CacheTagTable).where(
-            CacheTagTable.cache_id == instance.id,
-            CacheTagTable.tag_id.not_in([x.id for x in tags if x.id]),
-        )
+        sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance_id)
     )
-    insert = [{"name": x.name} for x in tags if not x.id]
-    sa_conn.execute(sa.insert(TagTable), insert)
-    inserted = (
-        sa_conn.execute(
-            sa.select(TagTable).where(TagTable.name.in_([x["name"] for x in insert]))
+    if not tags:
+        return
+    db_tags = sa_conn.execute(
+        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
+    ).all()
+    db_tags = {x.name: x.id for x in db_tags}
+    insert = [{"name": x.name} for x in tags if x.name not in db_tags]
+    if insert:
+        inserted = (
+            sa_conn.execute(sa.insert(TagTable).returning(TagTable.id), insert)
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+    else:
+        inserted = []
     sa_conn.execute(
         sa.insert(CacheTagTable),
-        [{"cache_id": instance.id, "tag_id": x.id} for x in inserted],
+        [
+            {"cache_id": instance_id, "tag_id": x}
+            for x in chain(inserted, db_tags.values())
+        ],
     )
-
-
-async def async_load_tags(tags: set[TagTable], session: AsyncConnection) -> None:
-    db_tags = await session.scalars(
-        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
-    )
-    if not db_tags:
-        return
-
-    db_tags_map = {x.name: x for x in db_tags}
-    for tag in tags:
-        if tag.name not in db_tags_map:
-            continue
-        tag.id = db_tags_map[tag.name].id
 
 
 async def async_merge_cache(
-    instance: CacheTable, tags: set[TagTable], sa_conn: AsyncConnection
+    instance: CacheTable | sa.Row[tuple[CacheTable]],
+    tags: set[TagTable],
+    sa_conn: AsyncConnection,
 ) -> None:
     if instance.id is None:
-        await sa_conn.execute(
-            sa.insert(CacheTable),
+        instance_id = await sa_conn.execute(
+            sa.insert(CacheTable).returning(CacheTable.id),
             {
                 "key": instance.key,
                 "raw": instance.raw,
@@ -388,7 +368,7 @@ async def async_merge_cache(
             },
         )
     else:
-        await sa_conn.execute(
+        instance_id = await sa_conn.execute(
             sa.update(CacheTable)
             .where(CacheTable.id == instance.id)
             .values(
@@ -401,27 +381,33 @@ async def async_merge_cache(
                 access_count=instance.access_count,
                 size=instance.size,
             )
+            .returning(CacheTable.id)
         )
-    if not tags:
-        await sa_conn.execute(
-            sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance.id)
-        )
-        return
+    instance_id = instance_id.scalar_one()
     await sa_conn.execute(
-        sa.delete(CacheTagTable).where(
-            CacheTagTable.cache_id == instance.id,
-            CacheTagTable.tag_id.not_in([x.id for x in tags if x.id]),
+        sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance_id)
+    )
+    if not tags:
+        return
+
+    db_tags = await sa_conn.execute(
+        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
+    )
+    db_tags = {x.name: x.id for x in db_tags.all()}
+    insert = [{"name": x.name} for x in tags if x.name not in db_tags]
+    if insert:
+        inserted_fetch = await sa_conn.execute(
+            sa.insert(TagTable).returning(TagTable.id), insert
         )
-    )
-    insert = [{"name": x.name} for x in tags if not x.id]
-    await sa_conn.execute(sa.insert(TagTable), insert)
-    inserted_fetch = await sa_conn.execute(
-        sa.select(TagTable).where(TagTable.name.in_([x["name"] for x in insert]))
-    )
-    inserted = inserted_fetch.scalars().all()
+        inserted = inserted_fetch.scalars().all()
+    else:
+        inserted = []
     await sa_conn.execute(
         sa.insert(CacheTagTable),
-        [{"cache_id": instance.id, "tag_id": x.id} for x in inserted],
+        [
+            {"cache_id": instance_id, "tag_id": x}
+            for x in chain(inserted, db_tags.values())
+        ],
     )
 
 
@@ -885,7 +871,7 @@ def pull_process(
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.scalars(stmt).one_or_none()
+        row = sa_conn.execute(stmt).one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
             return Container(
@@ -911,7 +897,7 @@ def pull_process(
         finally:
             if row.filepath is not None:
                 cleanup([row.filepath])
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 async def apull_process(
@@ -923,7 +909,7 @@ async def apull_process(
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row_fetch = await sa_conn.scalars(stmt)
+        row_fetch = await sa_conn.execute(stmt)
         row = row_fetch.one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
@@ -933,7 +919,14 @@ async def apull_process(
                 default=True,
             )
 
-        tags = await row.awaitable_attrs.tag_names
+        tags_fetch = await sa_conn.execute(
+            sa.select(TagTable.name)
+            .select_from(
+                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
+            )
+            .where(CacheTagTable.cache_id == row.id)
+        )
+        tags = tags_fetch.scalars().all()
         tags = set(tags)
         await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
         if (
@@ -953,7 +946,7 @@ async def apull_process(
         finally:
             if row.filepath is not None:
                 await cleanup([row.filepath])
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 def peek_process(
@@ -965,7 +958,7 @@ def peek_process(
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.scalars(stmt).one_or_none()
+        row = sa_conn.execute(stmt).one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
             return Container(
@@ -974,7 +967,20 @@ def peek_process(
                 default=True,
             )
 
-        tags = set(row.tag_names)
+        tags = (
+            sa_conn.execute(
+                sa.select(TagTable.name)
+                .select_from(
+                    sa.join(
+                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
+                    )
+                )
+                .where(CacheTagTable.cache_id == row.id)
+            )
+            .scalars()
+            .all()
+        )
+        tags = set(tags)
         if row.expire_time is not None and row.expire_time < time.time():
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             if row.filepath:
@@ -987,7 +993,7 @@ def peek_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 async def apeek_process(
@@ -999,7 +1005,7 @@ async def apeek_process(
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row_fetch = await sa_conn.scalars(stmt)
+        row_fetch = await sa_conn.execute(stmt)
         row = row_fetch.one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
@@ -1009,7 +1015,14 @@ async def apeek_process(
                 default=True,
             )
 
-        tags = await row.awaitable_attrs.tag_names
+        tags_fetch = await sa_conn.execute(
+            sa.select(TagTable.name)
+            .select_from(
+                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
+            )
+            .where(CacheTagTable.cache_id == row.id)
+        )
+        tags = tags_fetch.scalars().all()
         tags = set(tags)
         if row.expire_time is not None and row.expire_time < time.time():
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
@@ -1025,7 +1038,7 @@ async def apeek_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 def peekitem_stmt(*, last: bool) -> sa.Select[tuple[CacheTable]]:
@@ -1045,10 +1058,23 @@ def peekitem_process(
     retry: bool,
 ) -> tuple[CacheTable, Any, set[str]] | None:
     with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.scalars(stmt).one_or_none()
+        row = sa_conn.execute(stmt).one_or_none()
         if row is None:
             raise te.TypedDiskcacheKeyError("Cache is empty")
 
+        tags = (
+            sa_conn.execute(
+                sa.select(TagTable.name)
+                .select_from(
+                    sa.join(
+                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
+                    )
+                )
+                .where(CacheTagTable.cache_id == row.id)
+            )
+            .scalars()
+            .all()
+        )
         tags = set(row.tag_names)
         if row.expire_time is not None and row.expire_time < time.time():
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
@@ -1062,7 +1088,7 @@ def peekitem_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 async def apeekitem_process(
@@ -1073,12 +1099,19 @@ async def apeekitem_process(
     retry: bool,
 ) -> tuple[CacheTable, Any, set[str]] | None:
     async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row_fetch = await sa_conn.scalars(stmt)
+        row_fetch = await sa_conn.execute(stmt)
         row = row_fetch.one_or_none()
         if row is None:
             raise te.TypedDiskcacheKeyError("Cache is empty")
 
-        tags = await row.awaitable_attrs.tag_names
+        tags_fetch = await sa_conn.execute(
+            sa.select(TagTable.name)
+            .select_from(
+                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
+            )
+            .where(CacheTagTable.cache_id == row.id)
+        )
+        tags = tags_fetch.scalars().all()
         tags = set(tags)
         if row.expire_time is not None and row.expire_time < time.time():
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
@@ -1094,7 +1127,7 @@ async def apeekitem_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return row, value, tags
+        return CacheTable(**row._mapping).update(id=row.id), value, tags
 
 
 def prepare_iterkeys_stmt(
@@ -1274,7 +1307,7 @@ async def acheck_metadata_count(
         .select_from(Metadata)
         .where(Metadata.key == MetadataKey.COUNT)
     )
-    meta_count = meta_count_fetch.scalars().one()
+    meta_count = meta_count_fetch.one()
     cache_count_fetch = await session.scalars(
         sa.select(sa.func.count(CacheTable.id)).select_from(CacheTable)
     )

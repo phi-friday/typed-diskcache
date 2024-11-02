@@ -128,10 +128,6 @@ class Connection:
         )
         return ScopedRegistry(self._sync_engine.connect, scopefunc=scope_func)
 
-    @property
-    def _connection(self) -> SAConnection:
-        return self._sync_registry()
-
     @cached_property
     def _async_engine(self) -> AsyncEngine:
         engine = db_connect.ensure_sqlite_async_engine(self._async_url)
@@ -149,39 +145,49 @@ class Connection:
         )
         return ScopedRegistry(self._async_engine.connect, scopefunc=scope_func)
 
-    @property
-    def _aconnection(self) -> AsyncConnection:
-        return self._async_registry()
-
     @contextmanager
     def connect(self) -> Generator[SAConnection, None, None]:
         """Connect to the database."""
-        connection = self._connection
+        connection = self._sync_registry()
+        if connection.closed:
+            self._sync_registry.clear()
+            connection = self._sync_registry()
         try:
             yield connection
         finally:
             context = override_context.get()
             if context is None:
                 connection.close()
+                self._sync_registry.clear()
             else:
                 log_context_value = log_context.get()
                 if log_context_value == context:
                     connection.close()
+                    self._sync_registry.clear()
 
     @asynccontextmanager
     async def aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
         """Connect to the database."""
-        connection = self._aconnection
+        connection = self._async_registry()
+        if connection.sync_connection is None:
+            await connection.start()
+        if connection.closed:
+            self._async_registry.clear()
+            connection = self._async_registry()
+            if connection.sync_connection is None:
+                await connection.start()
         try:
             yield connection
         finally:
             context = override_context.get()
             if context is None:
                 await connection.close()
+                self._sync_registry.clear()
             else:
                 log_context_value = log_context.get()
                 if log_context_value == context:
                     await connection.close()
+                    self._sync_registry.clear()
 
     def close(self) -> None:
         """Close the connection."""

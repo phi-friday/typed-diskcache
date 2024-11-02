@@ -331,8 +331,8 @@ class FanoutCache(CacheProtocol):
         async with anyio.create_task_group() as task_group:
             for shard in self._shards:
                 task_group.start_soon(update_stats, shard)
-            task_group.start_soon(partial(self.aupdate_settings, statistics=enable))
 
+        await self.aupdate_settings(statistics=enable)
         return Stats(hits=hits, misses=misses)
 
     @override

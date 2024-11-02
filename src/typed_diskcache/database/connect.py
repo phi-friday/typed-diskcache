@@ -9,6 +9,7 @@ from contextlib import (
 )
 from typing import TYPE_CHECKING, Any, Callable, Protocol, overload, runtime_checkable
 
+import anyio
 import sqlalchemy as sa
 from sqlalchemy.dialects.sqlite import dialect as sqlite_dialect
 from sqlalchemy.engine import Connection, Engine, create_engine
@@ -52,6 +53,7 @@ SessionT = TypeVar("SessionT", bound="Session | AsyncSession", infer_variance=Tr
 
 _TIMEOUT = 10
 _TIMEOUT_MS = _TIMEOUT * 1000
+_LOCK = anyio.Lock()
 
 logger = get_logger()
 
@@ -258,10 +260,11 @@ def sync_transact(conn: Connection) -> Generator[Connection, None, None]:
 async def async_transact(
     conn: AsyncConnection,
 ) -> AsyncGenerator[AsyncConnection, None]:
-    is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
-    if is_begin is False:
-        conn.sync_connection.execute(sa.text("BEGIN IMMEDIATE;"))  # pyright: ignore[reportOptionalMemberAccess]
-        conn.info[CONNECTION_BEGIN_INFO_KEY] = True
+    async with _LOCK:
+        is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
+        if is_begin is False:
+            await conn.execute(sa.text("BEGIN IMMEDIATE;"))
+            conn.info[CONNECTION_BEGIN_INFO_KEY] = True
 
     try:
         yield conn

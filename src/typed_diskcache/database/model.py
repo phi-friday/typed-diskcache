@@ -7,7 +7,6 @@ import cloudpickle
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
-from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -19,7 +18,7 @@ from sqlalchemy.orm import (
     synonym,
 )
 from sqlalchemy_utils import ChoiceType
-from typing_extensions import TypeVar, override
+from typing_extensions import Self, TypeVar, override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.types import CacheMode, MetadataKey, SettingsKey
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
     from os import PathLike
 
     from sqlalchemy.engine import Connection
-    from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncConnection
     from sqlalchemy.orm import InstrumentedAttribute, Session
 
 
@@ -42,7 +41,7 @@ logger = get_logger()
 _UTC = timezone(timedelta(0))
 
 
-class Base(MappedAsDataclass, AsyncAttrs, DeclarativeBase):
+class Base(MappedAsDataclass, DeclarativeBase):
     __table__: ClassVar[sa.Table]  # pyright: ignore[reportIncompatibleVariableOverride]
 
     id: Mapped[int] = mapped_column(init=False, primary_key=True, autoincrement=True)
@@ -52,6 +51,12 @@ class Base(MappedAsDataclass, AsyncAttrs, DeclarativeBase):
     def __tablename__(cls) -> str:
         return camel_to_snake(cls.__name__)
 
+    def update(self, **kwargs: Any) -> Self:
+        """update the record"""
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        return self
+
 
 class Version(Base):
     """version table using in migration"""
@@ -59,7 +64,7 @@ class Version(Base):
     revision: Mapped[str] = mapped_column(sa.String(100))
 
     @classmethod
-    def get(cls, session: Session | Connection) -> str:
+    def get(cls, session: Connection) -> str:
         """get revision id"""
         stmt = sa.select(cls.revision).where(cls.id == 1)
         try:
@@ -72,7 +77,7 @@ class Version(Base):
         return value
 
     @classmethod
-    async def aget(cls, session: AsyncSession | AsyncConnection) -> str:
+    async def aget(cls, session: AsyncConnection) -> str:
         """get revision id"""
         stmt = sa.select(cls.revision).where(cls.id == 1)
         try:
@@ -84,7 +89,7 @@ class Version(Base):
             raise te.TypedDiskcacheValueError("version table is empty")
         return value
 
-    def set(self, session: Session | Connection) -> None:
+    def set(self, session: Connection) -> None:
         """set revision id"""
         stmt = (
             sa.update(Version)
@@ -94,7 +99,7 @@ class Version(Base):
         session.execute(stmt)
         logger.debug("set revision id: `%s`", self.revision)
 
-    async def aset(self, session: AsyncSession | AsyncConnection) -> None:
+    async def aset(self, session: AsyncConnection) -> None:
         """set revision id"""
         stmt = (
             sa.update(Version)
@@ -114,7 +119,7 @@ class Version(Base):
 
     @classmethod
     async def adelete(
-        cls, session: AsyncSession | AsyncConnection, version_id: int | None = None
+        cls, session: AsyncConnection, version_id: int | None = None
     ) -> None:
         """delete version table"""
         await session.execute(sa.delete(cls).where(Version.id == (version_id or 1)))

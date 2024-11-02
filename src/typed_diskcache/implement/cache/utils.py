@@ -16,14 +16,19 @@ from typed_diskcache.core.types import Container, SettingsKey, SettingsKwargs
 from typed_diskcache.database import Connection
 from typed_diskcache.database.connect import transact as database_transact
 from typed_diskcache.database.model import Cache as CacheTable
+from typed_diskcache.database.model import CacheTag as CacheTagTable
 from typed_diskcache.database.model import Settings as SettingsTable
+from typed_diskcache.database.model import Tag as TagTable
 from typed_diskcache.database.revision import auto as revision_auto
 from typed_diskcache.log import get_logger
 from typed_diskcache.model import Settings, SQLiteSettings
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Callable, Mapping
     from pathlib import Path
+
+    from sqlalchemy.engine import Connection as SAConnection
+    from sqlalchemy.ext.asyncio import AsyncConnection
 
     from typed_diskcache.interface.disk import DiskProtocol
 
@@ -63,9 +68,7 @@ def init_args(
     with conn.connect() as session:
         logger.debug("Checking for existing cache settings")
         try:
-            setting_records: Sequence[SettingsTable] = session.scalars(
-                sa.select(SettingsTable)
-            ).all()
+            setting_records = session.execute(sa.select(SettingsTable)).all()
         except OperationalError:
             logger.debug("No existing cache settings found")
             setting_records = []
@@ -119,7 +122,7 @@ def init_args(
                             modified_at=record.modified_at,
                         )
                     )
-            session.commit()
+            sa_conn.commit()
 
     conn.update_settings(settings)
     conn.timeout = float(timeout)
@@ -135,21 +138,51 @@ def wrap_default(value: _T) -> Container[_T]:
 
 
 def wrap_instnace(
-    key: Any, value: _T, cache: CacheTable, tags: Iterable[str] | None = None
+    key: Any,
+    value: _T,
+    cache: CacheTable | sa.Row[tuple[CacheTable]],
+    session_or_tags: SAConnection | set[str],
 ) -> Container[_T]:
-    tags = frozenset(cache.tag_names) if tags is None else frozenset(tags)
+    if isinstance(session_or_tags, set):
+        tags = frozenset(session_or_tags)
+    else:
+        tags = (
+            session_or_tags.execute(
+                sa.select(TagTable.name)
+                .select_from(
+                    sa.join(
+                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
+                    )
+                )
+                .where(CacheTagTable.cache_id == cache.id)
+            )
+            .scalars()
+            .all()
+        )
+        tags = frozenset(tags)
     return Container(
         value=value, default=False, expire_time=cache.expire_time, tags=tags, key=key
     )
 
 
 async def async_wrap_instnace(
-    key: Any, value: _T, cache: CacheTable, tags: Iterable[str] | None
+    key: Any,
+    value: _T,
+    cache: CacheTable | sa.Row[tuple[CacheTable]],
+    session_or_tags: AsyncConnection | set[str],
 ) -> Container[_T]:
-    if tags is None:
-        tags = await cache.awaitable_attrs.tag_names
-    tags = frozenset(tags)  # pyright: ignore[reportArgumentType]
-
+    if isinstance(session_or_tags, set):
+        tags = frozenset(session_or_tags)
+    else:
+        tags_fetch = await session_or_tags.execute(
+            sa.select(TagTable.name)
+            .select_from(
+                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
+            )
+            .where(CacheTagTable.cache_id == cache.id)
+        )
+        tags = tags_fetch.scalars().all()
+        tags = frozenset(tags)
     return Container(
         value=value, default=False, expire_time=cache.expire_time, tags=tags, key=key
     )
