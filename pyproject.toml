@@ -43,8 +43,9 @@ test = [
     "pytest-cov>=5.0.0",
     "pytest-env>=1.1.5",
     "pytest-xdist>=3.6.1",
+    "pytest-timeout>=2.3.1",
     "uvloop>=0.21.0",
-    "typed-diskcache[asyncio]"
+    "typed-diskcache[asyncio]",
 ]
 dev = [
     { include-group = "test"},
@@ -95,6 +96,7 @@ testpaths = ["src/tests"]
 markers = [
     "only"
 ]
+timeout = 3
 
 [tool.coverage.run]
 omit = ["./src/tests/**/*"]
