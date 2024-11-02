@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import inspect
 import pickle
+import time
 from collections.abc import Callable
 from contextlib import suppress
+from functools import partial
 from itertools import product
 from pathlib import Path
 from typing import Any, Literal
@@ -251,6 +253,37 @@ class TestCache:
         assert len(self.origin_cache) == 0
         assert (await self.cache.aget(key)).default
 
+    async def test_getset_tags(self):
+        assert await self.cache.aset(0, 0, tags="tag1")
+        assert await self.cache.aset(1, 1, tags=["tag2"])
+        assert await self.cache.aset(2, 2, tags=["tag1", "tag2"])
+
+        container = await self.cache.aget(0)
+        assert not container.default
+        assert container.tags
+        assert len(container.tags) == 1
+        assert "tag1" in container.tags
+
+        container = await self.cache.aget(1)
+        assert not container.default
+        assert container.tags
+        assert len(container.tags) == 1
+        assert "tag2" in container.tags
+
+        container = await self.cache.aget(2)
+        assert not container.default
+        assert container.tags
+        assert len(container.tags) == 2
+        assert "tag1" in container.tags
+        assert "tag2" in container.tags
+
+    async def test_get_default(self, uid):
+        assert uid not in self.origin_cache
+        container = await self.cache.aget(uid, default=uid)
+        assert isinstance(container, typed_diskcache.Container)
+        assert container.default
+        assert container.value == uid
+
     async def test_clear(self):
         for key in range(10):
             assert await self.cache.aset(key, key)
@@ -299,3 +332,113 @@ class TestCache:
 
     # TODO: test_volume
     # TODO: test_close
+
+    async def test_touch(self):
+        key = 0
+        expire = 10
+        now = time.time()
+        assert await self.cache.aset(key, key, expire=expire)
+        container = await self.cache.aget(key)
+        assert not container.default
+        assert container.expire_time
+        assert now + expire < container.expire_time < time.time() + expire
+
+        assert await self.cache.atouch(key, expire=None)
+        container = await self.cache.aget(key)
+        assert not container.default
+        assert not container.expire_time
+
+        assert await self.cache.atouch(key, expire=expire)
+        container = await self.cache.aget(key)
+        assert not container.default
+        assert container.expire_time
+        assert now + expire < container.expire_time < time.time() + expire
+
+    async def test_add(self):
+        key = 0
+        assert key not in self.origin_cache
+        assert await self.cache.aadd(key, 0)
+        assert key in self.origin_cache
+        assert self.origin_cache[key].value == 0
+        assert not await self.cache.aadd(key, 1)
+        assert self.origin_cache[key].value == 0
+        assert self.origin_cache.delete(key)
+        assert await self.cache.aadd(key, 1)
+        assert self.origin_cache[key].value == 1
+
+    async def test_pop(self, uid):
+        key = 0
+        assert key not in self.origin_cache
+        container = await self.cache.apop(key)
+        assert container.default
+        assert await self.cache.aset(key, uid)
+        container = await self.cache.apop(key)
+        assert not container.default
+        assert container.value == uid
+        assert key not in self.origin_cache
+
+    async def test_pop_default(self, uid):
+        key = 0
+        assert key not in self.origin_cache
+        container = await self.cache.apop(key, default=uid)
+        assert isinstance(container, typed_diskcache.Container)
+        assert container.default
+        assert container.value == uid
+
+    @pytest.mark.parametrize(
+        ("tags", "method", "expected"),
+        [
+            (["tag0"], "and", [1, 4, 5, 7]),
+            (["tag0", "tag1"], "and", [4, 7]),
+            (["tag0", "tag1"], "or", [1, 2, 4, 5, 6, 7]),
+        ],
+    )
+    def test_filter(self, tags, method, expected):
+        assert len(self.origin_cache) == 0
+        for index, add_tags in enumerate([
+            [],
+            ["tag0"],
+            ["tag1"],
+            ["tag2"],
+            ["tag0", "tag1"],
+            ["tag0", "tag2"],
+            ["tag1", "tag2"],
+            ["tag0", "tag1", "tag2"],
+        ]):
+            self.origin_cache.set(index, index, tags=add_tags)
+
+        assert len(self.origin_cache) == 8
+        select = set(self.origin_cache.filter(tags, method=method))
+        assert select == set(expected)
+
+    @pytest.mark.only
+    @pytest.mark.parametrize(
+        ("tags", "method", "expected"),
+        [
+            (["tag0"], "and", [1, 4, 5, 7]),
+            (["tag0", "tag1"], "and", [4, 7]),
+            (["tag0", "tag1"], "or", [1, 2, 4, 5, 6, 7]),
+        ],
+    )
+    async def test_afilter(self, tags, method, expected):
+        assert len(self.origin_cache) == 0
+        async with anyio.create_task_group() as task_group:
+            for index, add_tags in enumerate([
+                [],
+                ["tag0"],
+                ["tag1"],
+                ["tag2"],
+                ["tag0", "tag1"],
+                ["tag0", "tag2"],
+                ["tag1", "tag2"],
+                ["tag0", "tag1", "tag2"],
+            ]):
+                task_group.start_soon(
+                    partial(
+                        self.origin_cache.aset, index, index, tags=add_tags, retry=True
+                    )
+                )
+
+        assert len(self.origin_cache) == 8
+        select = [x async for x in self.origin_cache.afilter(tags, method=method)]
+        assert set(select) == set(expected)
