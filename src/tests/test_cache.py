@@ -250,3 +250,52 @@ class TestCache:
         assert await self.cache.adelete(key)
         assert len(self.origin_cache) == 0
         assert (await self.cache.aget(key)).default
+
+    async def test_clear(self):
+        for key in range(10):
+            assert await self.cache.aset(key, key)
+        assert len(self.origin_cache) == 10
+        await self.cache.aclear()
+        assert len(self.origin_cache) == 0
+
+    async def test_stats(self, uid):
+        self.origin_cache.update_settings(statistics=True)
+
+        stats = await self.cache.astats()
+        assert stats.hits == 0
+        assert stats.misses == 0
+        assert stats == (0, 0)
+
+        assert len(self.origin_cache) == 0
+        await self.cache.aget(uid)
+        assert (await self.cache.astats()) == (0, 1)
+        await self.cache.aget(uid)
+        assert (await self.cache.astats()) == (0, 2)
+
+        assert await self.cache.aset(uid, 0)
+        await self.cache.aget(uid)
+        assert (await self.cache.astats()) == (1, 2)
+        await self.cache.aget(uid)
+        assert (await self.cache.astats()) == (2, 2)
+
+    @pytest.mark.parametrize("enable", [True, False])
+    async def test_stats_enable(self, uid, enable):
+        await self.cache.aget(uid)
+        assert await self.cache.astats(enable=enable) == (0, 0)
+        await self.cache.aget(uid)
+        assert await self.cache.aset(uid, 0)
+        await self.cache.aget(uid)
+        assert await self.cache.astats() == (int(enable), int(enable))
+
+    @pytest.mark.parametrize("reset", [True, False])
+    async def test_stats_reset(self, uid, reset):
+        self.origin_cache.update_settings(statistics=True)
+
+        await self.cache.aget(uid)
+        assert await self.cache.aset(uid, 0)
+        await self.cache.aget(uid)
+        assert await self.cache.astats(reset=reset) == (1, 1)
+        assert await self.cache.astats() == (int(not reset), int(not reset))
+
+    # TODO: test_volume
+    # TODO: test_close
