@@ -4,6 +4,7 @@ import inspect
 import pickle
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import suppress
 from functools import partial
 from itertools import product
@@ -51,7 +52,13 @@ def unwrap(func: Callable[..., Any]) -> Any:
 
 
 @pytest.mark.parametrize(
-    ("cache_type", "is_async"), list(product(["cache", "fanoutcache"], [True, False]))
+    ("cache_type", "is_async"),
+    [
+        pytest.param("cache", True, id="cache-async"),
+        pytest.param("cache", False, id="cache-sync"),
+        pytest.param("fanoutcache", True, id="fanoutcache-async"),
+        pytest.param("fanoutcache", False, id="fanoutcache-sync"),
+    ],
 )
 class TestCache:
     cache_type: Literal["cache", "fanoutcache"]
@@ -395,17 +402,21 @@ class TestCache:
     )
     def test_filter(self, tags, method, expected):
         assert len(self.origin_cache) == 0
-        for index, add_tags in enumerate([
-            [],
-            ["tag0"],
-            ["tag1"],
-            ["tag2"],
-            ["tag0", "tag1"],
-            ["tag0", "tag2"],
-            ["tag1", "tag2"],
-            ["tag0", "tag1", "tag2"],
-        ]):
-            self.origin_cache.set(index, index, tags=add_tags)
+        with ThreadPoolExecutor() as pool:
+            futures = [
+                pool.submit(self.origin_cache.set, index, index, tags=add_tags)
+                for index, add_tags in enumerate([
+                    [],
+                    ["tag0"],
+                    ["tag1"],
+                    ["tag2"],
+                    ["tag0", "tag1"],
+                    ["tag0", "tag2"],
+                    ["tag1", "tag2"],
+                    ["tag0", "tag1", "tag2"],
+                ])
+            ]
+            wait(futures)
 
         assert len(self.origin_cache) == 8
         select = set(self.origin_cache.filter(tags, method=method))
@@ -441,3 +452,81 @@ class TestCache:
         assert len(self.origin_cache) == 8
         select = [x async for x in self.origin_cache.afilter(tags, method=method)]
         assert set(select) == set(expected)
+
+    @pytest.mark.parametrize(("delta", "default"), product([1, 2, 3], [0, 1, 2]))
+    async def test_incr(self, delta: int, default: int):
+        key = 0
+        assert key not in self.origin_cache
+        value = await self.cache.aincr(key, delta, default)
+        assert value == default + delta
+        assert self.origin_cache[key].value == default + delta
+        value = await self.cache.aincr(key, delta, default)
+        assert value == default + 2 * delta
+        assert self.origin_cache[key].value == default + 2 * delta
+
+    async def test_incr_error(self):
+        key = 0
+        assert key not in self.origin_cache
+        with pytest.raises(te.TypedDiskcacheKeyError):
+            await self.cache.aincr(key, default=None)
+
+    @pytest.mark.parametrize(("delta", "default"), product([1, 2, 3], [0, 1, 2]))
+    async def test_decr(self, delta: int, default: int):
+        key = 0
+        assert key not in self.origin_cache
+        value = await self.cache.adecr(key, delta, default)
+        assert value == default - delta
+        assert self.origin_cache[key].value == default - delta
+        value = await self.cache.adecr(key, delta, default)
+        assert value == default - 2 * delta
+        assert self.origin_cache[key].value == default - 2 * delta
+
+    async def test_decr_error(self):
+        key = 0
+        assert key not in self.origin_cache
+        with pytest.raises(te.TypedDiskcacheKeyError):
+            await self.cache.adecr(key, default=None)
+
+    # TODO: test_evict
+
+    async def test_expire(self):
+        key = 0
+        now = time.time()
+        assert await self.cache.aset(key, 0, expire=100)
+        count = await self.cache.aexpire()
+        assert count == 0
+        assert key in self.origin_cache
+        count = await self.cache.aexpire(now + 200)
+        assert count == 1
+        assert key not in self.origin_cache
+
+    # TODO: test_cull
+    # TODO: test_push
+    # TODO: test_pull
+    # TODO: test_peek
+    # TODO: test_peekitem
+    # TODO: test_check
+
+    def test_iterkeys(self):
+        iter_type = set if self.cache_type == "fanoutcache" else list
+        assert len(self.origin_cache) == 0
+        for key in range(10):
+            self.origin_cache[key] = key
+
+        assert iter_type(self.origin_cache.iterkeys()) == iter_type(range(10))
+        assert iter_type(self.origin_cache.iterkeys(reverse=True)) == iter_type(
+            range(9, -1, -1)
+        )
+
+    async def test_aiterkeys(self):
+        iter_type = set if self.cache_type == "fanoutcache" else list
+        assert len(self.origin_cache) == 0
+        for key in range(10):
+            await self.cache.aset(key, key)
+
+        keys = [key async for key in self.origin_cache.aiterkeys()]
+        assert iter_type(keys) == iter_type(range(10))
+        keys = [key async for key in self.origin_cache.aiterkeys(reverse=True)]
+        assert iter_type(keys) == iter_type(range(9, -1, -1))
+
+    # TODO: test_update_settings

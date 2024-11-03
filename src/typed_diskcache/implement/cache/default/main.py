@@ -1196,8 +1196,9 @@ class Cache(CacheProtocol):
             )
             value += delta
             origin_filepath = row.filepath
-            row.size, row.mode, row.filepath, row.value = self.disk.store(
-                value, key=row.key
+            instance = CacheTable.parse_row(row)
+            instance.size, instance.mode, instance.filepath, instance.value = (
+                self.disk.store(value, key=row.key)
             )
             update_stmt = self.conn.eviction.get
             if update_stmt is not None:
@@ -1205,14 +1206,14 @@ class Cache(CacheProtocol):
                 sa_conn.execute(
                     update_stmt,
                     {
-                        "id": row.id,
+                        "id": instance.id,
                         "access_time": now,
-                        "access_count": row.access_count + 1,
+                        "access_count": instance.access_count + 1,
                     },
                 )
 
-            row.store_time = now
-            default_utils.merge_cache(row, set(), sa_conn)
+            instance.store_time = now
+            default_utils.merge_cache(instance, set(), sa_conn)
             if origin_filepath:
                 cleanup([origin_filepath])
 
@@ -1296,23 +1297,27 @@ class Cache(CacheProtocol):
             )
             value += delta
             origin_filepath = row.filepath
-            row.size, row.mode, row.filepath, row.value = await self.disk.astore(
-                value, key=row.key
-            )
+            instance = CacheTable.parse_row(row)
+            (
+                instance.size,
+                instance.mode,
+                instance.filepath,
+                instance.value,
+            ) = await self.disk.astore(value, key=row.key)
             update_stmt = self.conn.eviction.get
             if update_stmt is not None:
                 logger.debug("Update eviction metadata")
                 await sa_conn.execute(
                     update_stmt,
                     {
-                        "id": row.id,
+                        "id": instance.id,
                         "access_time": now,
-                        "access_count": row.access_count + 1,
+                        "access_count": instance.access_count + 1,
                     },
                 )
 
-            row.store_time = now
-            await default_utils.async_merge_cache(row, set(), sa_conn)
+            instance.store_time = now
+            await default_utils.async_merge_cache(instance, set(), sa_conn)
             if origin_filepath:
                 await cleanup([origin_filepath])
 

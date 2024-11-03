@@ -295,6 +295,19 @@ class Cache(Base):
     def filepath(cls) -> InstrumentedAttribute[str | None]:  # noqa: D102
         return cls._filepath
 
+    @classmethod
+    def parse_row(cls, row: sa.Row[tuple[Self]]) -> Self:
+        """parse row to instance"""
+        values = {
+            key: getattr(row, key)
+            for key in cls.__table__.columns.keys()  # noqa: SIM118
+        }
+        row_id = values.pop("id", None)
+        new = cls(**values)
+        if row_id is not None:
+            new.id = row_id
+        return new
+
 
 class Tag(Base):
     __table_args__ = (sa.UniqueConstraint("name", name="tag_name"),)
