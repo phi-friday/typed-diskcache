@@ -11,7 +11,7 @@ from typing_extensions import override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DEFAULT_LOCK_TIMEOUT, SPIN_LOCK_SLEEP
-from typed_diskcache.core.context import context
+from typed_diskcache.core.context import context, enter_connection
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncLockProtocol, SyncLockProtocol
 from typed_diskcache.log import get_logger
@@ -124,13 +124,20 @@ class SyncRLock(SyncLock):
             while timeout < self.timeout:
                 sa_conn = stack.enter_context(self._cache.conn.connect())
                 stack.enter_context(transact(sa_conn))
-                container = self._cache.get(self.key, default=("default", 0))
+                context = stack.enter_context(enter_connection(sa_conn))
+                container = context.run(
+                    self._cache.get, self.key, default=("default", 0)
+                )
                 container_value = validate_lock_value(container.value)
                 if container.default or pid_tid == container_value[0]:
                     value = 1 if container.default else container_value[1] + 1
                     logger.debug("acquired lock: %s, value: %d", pid_tid, value)
-                    self._cache.set(
-                        self.key, (pid_tid, value), expire=self.expire, tags=self.tags
+                    context.run(
+                        self._cache.set,
+                        self.key,
+                        (pid_tid, value),
+                        expire=self.expire,
+                        tags=self.tags,
                     )
                     return
                 stack.close()
@@ -149,7 +156,8 @@ class SyncRLock(SyncLock):
         with ExitStack() as stack:
             sa_conn = stack.enter_context(self._cache.conn.connect())
             stack.enter_context(transact(sa_conn))
-            container = self._cache.get(self.key, default=("default", 0))
+            context = stack.enter_context(enter_connection(sa_conn))
+            container = context.run(self._cache.get, self.key, default=("default", 0))
             container_value = validate_lock_value(container.value)
             if (
                 container.default
@@ -163,7 +171,8 @@ class SyncRLock(SyncLock):
                     container_value,
                 )
                 raise te.TypedDiskcacheRuntimeError("cannot release un-acquired lock")
-            self._cache.set(
+            context.run(
+                self._cache.set,
                 self.key,
                 (container_value[0], container_value[1] - 1),
                 expire=self.expire,
@@ -273,12 +282,16 @@ class AsyncRLock(AsyncLock):
                         self._cache.conn.aconnect()
                     )
                     await sub_stack.enter_async_context(transact(sa_conn))
-                    container = await self._cache.aget(self.key, default=("default", 0))
+                    context = stack.enter_context(enter_connection(sa_conn))
+                    container = await context.run(
+                        self._cache.aget, self.key, default=("default", 0)
+                    )
                     container_value = validate_lock_value(container.value)
                     if container.default or pid_tid == container_value[0]:
                         value = 1 if container.default else container_value[1] + 1
                         logger.debug("acquired lock: %s, value: %d", pid_tid, value)
-                        await self._cache.aset(
+                        await context.run(
+                            self._cache.aset,
                             self.key,
                             (pid_tid, value),
                             expire=self.expire,

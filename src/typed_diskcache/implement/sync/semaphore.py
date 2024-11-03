@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DEFAULT_LOCK_TIMEOUT, SPIN_LOCK_SLEEP
-from typed_diskcache.core.context import context
+from typed_diskcache.core.context import context, enter_connection
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncSemaphoreProtocol, SyncSemaphoreProtocol
 from typed_diskcache.log import get_logger
@@ -82,10 +82,12 @@ class SyncSemaphore(SyncSemaphoreProtocol):
             while timeout < self.timeout:
                 sa_conn = stack.enter_context(self._cache.conn.connect())
                 stack.enter_context(transact(sa_conn))
-                container = self._cache.get(self.key, default=self._value)
+                context = stack.enter_context(enter_connection(sa_conn))
+                container = context.run(self._cache.get, self.key, default=self._value)
                 container_value = validate_semaphore_value(container.value)
                 if container_value > 0:
-                    self._cache.set(
+                    context.run(
+                        self._cache.set,
                         self.key,
                         container_value - 1,
                         expire=self.expire,
@@ -104,7 +106,8 @@ class SyncSemaphore(SyncSemaphoreProtocol):
         with ExitStack() as stack:
             sa_conn = stack.enter_context(self._cache.conn.connect())
             stack.enter_context(transact(sa_conn))
-            container = self._cache.get(self.key, default=self._value)
+            context = stack.enter_context(enter_connection(sa_conn))
+            container = context.run(self._cache.get, self.key, default=self._value)
             container_value = validate_semaphore_value(container.value)
             if self._value <= container_value:
                 logger.error(
@@ -115,8 +118,12 @@ class SyncSemaphore(SyncSemaphoreProtocol):
                 raise te.TypedDiskcacheRuntimeError(
                     "cannot release un-acquired semaphore"
                 )
-            self._cache.set(
-                self.key, container_value + 1, expire=self.expire, tags=self.tags
+            context.run(
+                self._cache.set,
+                self.key,
+                container_value + 1,
+                expire=self.expire,
+                tags=self.tags,
             )
 
     @override
@@ -194,10 +201,14 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
                         self._cache.conn.aconnect()
                     )
                     await sub_stack.enter_async_context(transact(sa_conn))
-                    container = await self._cache.aget(self.key, default=self._value)
+                    context = stack.enter_context(enter_connection(sa_conn))
+                    container = await context.run(
+                        self._cache.aget, self.key, default=self._value
+                    )
                     container_value = validate_semaphore_value(container.value)
                     if container_value > 0:
-                        await self._cache.aset(
+                        await context.run(
+                            self._cache.aset,
                             self.key,
                             container_value - 1,
                             expire=self.expire,
@@ -215,7 +226,10 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         async with AsyncExitStack() as stack:
             sa_conn = await stack.enter_async_context(self._cache.conn.aconnect())
             await stack.enter_async_context(transact(sa_conn))
-            container = await self._cache.aget(self.key, default=self._value)
+            context = stack.enter_context(enter_connection(sa_conn))
+            container = await context.run(
+                self._cache.aget, self.key, default=self._value
+            )
             container_value = validate_semaphore_value(container.value)
             if self._value <= container_value:
                 logger.error(
@@ -226,8 +240,12 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
                 raise te.TypedDiskcacheRuntimeError(
                     "cannot release un-acquired semaphore"
                 )
-            await self._cache.aset(
-                self.key, container_value + 1, expire=self.expire, tags=self.tags
+            await context.run(
+                self._cache.aset,
+                self.key,
+                container_value + 1,
+                expire=self.expire,
+                tags=self.tags,
             )
 
     @override
