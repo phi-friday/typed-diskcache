@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import threading
 from contextlib import contextmanager
-from contextvars import ContextVar, Token, copy_context
+from contextvars import Context, ContextVar, Token, copy_context
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, overload
 
@@ -14,12 +14,25 @@ from typed_diskcache.core.const import DEFAULT_LOG_CONTEXT, DEFAULT_LOG_THREAD
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-__all__ = ["log_context", "context"]
+    from sqlalchemy.engine import Connection
+    from sqlalchemy.ext.asyncio import AsyncConnection
+
+__all__ = [
+    "log_context",
+    "conn_context",
+    "aconn_context",
+    "enter_connection",
+    "context",
+]
 
 _F = TypeVar("_F", bound="Callable[..., Any]", infer_variance=True)
 
 log_context: ContextVar[tuple[str, int]] = ContextVar(
     "log_thread_context", default=(DEFAULT_LOG_CONTEXT, DEFAULT_LOG_THREAD)
+)
+conn_context: ContextVar[Connection | None] = ContextVar("conn_context", default=None)
+aconn_context: ContextVar[AsyncConnection | None] = ContextVar(
+    "aconn_context", default=None
 )
 
 
@@ -57,6 +70,33 @@ def context(func_or_context: _F | str) -> _F | Callable[[_F], _F]:
         return _context(func_or_context, name=name)
 
     return partial(_context, name=func_or_context)
+
+
+@contextmanager
+def enter_connection(
+    conn: Connection | AsyncConnection,
+) -> Generator[Context, None, None]:
+    """Enter the connection context.
+
+    Args:
+        conn: The connection to enter.
+
+    Yields:
+        Copy of the current context.
+    """
+    from sqlalchemy.ext.asyncio import AsyncConnection
+
+    if isinstance(conn, AsyncConnection):
+        token = aconn_context.set(conn)
+        reset_context = aconn_context.reset
+    else:
+        token = conn_context.set(conn)
+        reset_context = conn_context.reset
+    context = copy_context()
+    try:
+        yield context
+    finally:
+        reset_context(token)  # pyright: ignore[reportArgumentType]
 
 
 def _context(func: _F, *, name: str) -> _F:

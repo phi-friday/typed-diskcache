@@ -5,9 +5,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import anyio.lowlevel
 import sqlalchemy as sa
 
 from typed_diskcache import exception as te
+from typed_diskcache.core.context import aconn_context, conn_context
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
@@ -127,12 +129,23 @@ class Connection:
     @contextmanager
     def connect(self) -> Generator[SAConnection, None, None]:
         """Connect to the database."""
+        conn = conn_context.get()
+        if conn is not None:
+            yield conn
+            return
+
         with self._sync_engine.connect() as connection:
             yield connection
 
     @asynccontextmanager
     async def aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
         """Connect to the database."""
+        conn = aconn_context.get()
+        if conn is not None:
+            await anyio.lowlevel.checkpoint()
+            yield conn
+            return
+
         async with self._async_engine.connect() as connection:
             yield connection
 

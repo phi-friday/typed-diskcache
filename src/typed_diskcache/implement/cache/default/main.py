@@ -14,7 +14,7 @@ from typing_extensions import TypeAlias, TypeVar, Unpack, override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
-from typed_diskcache.core.context import context
+from typed_diskcache.core.context import context, enter_connection
 from typed_diskcache.core.types import (
     Container,
     EvictionPolicy,
@@ -736,9 +736,13 @@ class Cache(CacheProtocol):
                 .where(SettingsTable.key == SettingsKey.STATISTICS)
                 .values(value=enable)
             )
-        self.update_settings(self.settings.model_copy(update={"statistics": enable}))
+            with enter_connection(sa_conn) as context:
+                context.run(
+                    self.update_settings,
+                    self.settings.model_copy(update={"statistics": enable}),
+                )
 
-        return stats
+            return stats
 
     @context
     @override
@@ -768,10 +772,12 @@ class Cache(CacheProtocol):
                 .where(SettingsTable.key == SettingsKey.STATISTICS)
                 .values(value=enable)
             )
-        await self.aupdate_settings(
-            self.settings.model_copy(update={"statistics": enable})
-        )
-        return stats
+            with enter_connection(sa_conn) as context:
+                await context.run(
+                    self.aupdate_settings,
+                    self.settings.model_copy(update={"statistics": enable}),
+                )
+            return stats
 
     @override
     def close(self) -> None:
