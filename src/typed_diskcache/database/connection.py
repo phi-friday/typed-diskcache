@@ -7,9 +7,16 @@ from typing import TYPE_CHECKING, Any
 
 import anyio.lowlevel
 import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
+from sqlalchemy.orm import Session
 
 from typed_diskcache import exception as te
-from typed_diskcache.core.context import aconn_context, conn_context
+from typed_diskcache.core.context import (
+    aconn_context,
+    asession_context,
+    conn_context,
+    session_context,
+)
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
@@ -19,7 +26,6 @@ if TYPE_CHECKING:
     from os import PathLike
 
     from sqlalchemy.engine import Connection as SAConnection
-    from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
     from typed_diskcache.model import Settings
 
@@ -127,7 +133,7 @@ class Connection:
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
     @contextmanager
-    def connect(self) -> Generator[SAConnection, None, None]:
+    def _connect(self) -> Generator[SAConnection, None, None]:
         """Connect to the database."""
         conn = conn_context.get()
         if conn is not None:
@@ -137,8 +143,20 @@ class Connection:
         with self._sync_engine.connect() as connection:
             yield connection
 
+    @contextmanager
+    def session(self) -> Generator[Session, None, None]:
+        """Connect to the database."""
+        session = session_context.get()
+        if session is not None:
+            yield session
+            return
+
+        with self._connect() as connection:
+            with Session(connection, autoflush=False) as session:
+                yield session
+
     @asynccontextmanager
-    async def aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
+    async def _aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
         """Connect to the database."""
         conn = aconn_context.get()
         if conn is not None:
@@ -148,6 +166,19 @@ class Connection:
 
         async with self._async_engine.connect() as connection:
             yield connection
+
+    @asynccontextmanager
+    async def asession(self) -> AsyncGenerator[AsyncSession, None]:
+        """Connect to the database."""
+        session = asession_context.get()
+        if session is not None:
+            await anyio.lowlevel.checkpoint()
+            yield session
+            return
+
+        async with self._aconnect() as connection:
+            async with AsyncSession(connection, autoflush=False) as session:
+                yield session
 
     def close(self) -> None:
         """Close the connection."""

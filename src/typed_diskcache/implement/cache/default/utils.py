@@ -4,12 +4,12 @@ import os
 import time
 import warnings
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
-from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import selectinload
 from typing_extensions import TypeAlias, TypeVar, Unpack
 
 from typed_diskcache import exception as te
@@ -49,8 +49,8 @@ if TYPE_CHECKING:
 
     from anyio import Path as AnyioPath
     from anyio.streams.memory import MemoryObjectSendStream
-    from sqlalchemy.engine import Connection as SAConnection
-    from sqlalchemy.ext.asyncio import AsyncConnection
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import Session
 
     from typed_diskcache.database import Connection
     from typed_diskcache.interface.disk import DiskProtocol
@@ -80,6 +80,7 @@ def prepare_get_stmt(disk: DiskProtocol, key: Any) -> sa.Select[tuple[CacheTable
                 CacheTable.expire_time > sa.bindparam("expire_time", type_=sa.Float()),
             ),
         )
+        .options(selectinload(CacheTable.tags))
     )
 
 
@@ -158,10 +159,10 @@ def transact_process(
     *,
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
-) -> SAConnection | None:
+) -> Session | None:
     try:
-        sa_conn = stack.enter_context(conn.connect())
-        sa_conn = stack.enter_context(database_transact(sa_conn))
+        session = stack.enter_context(conn.session())
+        session = stack.enter_context(database_transact(session))
     except OperationalError as exc:
         stack.close()
         if not retry:
@@ -170,7 +171,7 @@ def transact_process(
             raise te.TypedDiskcacheTimeoutError from exc
         return None
     else:
-        return sa_conn
+        return session
 
 
 async def async_transact_process(
@@ -180,10 +181,10 @@ async def async_transact_process(
     *,
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
-) -> AsyncConnection | None:
+) -> AsyncSession | None:
     try:
-        sa_conn = await stack.enter_async_context(conn.aconnect())
-        sa_conn = await stack.enter_async_context(database_transact(sa_conn))
+        session = await stack.enter_async_context(conn.asession())
+        session = await stack.enter_async_context(database_transact(session))
     except OperationalError as exc:
         await stack.aclose()
         if not retry:
@@ -192,7 +193,7 @@ async def async_transact_process(
             raise te.TypedDiskcacheTimeoutError from exc
         return None
     else:
-        return sa_conn
+        return session
 
 
 def iter_disk(
@@ -217,8 +218,8 @@ def iter_disk(
     )
 
     while True:
-        with conn.connect() as sa_conn:
-            rows = sa_conn.execute(
+        with conn.session() as session:
+            rows = session.execute(
                 stmt,
                 {"left_bound": rowid, "right_bound": bound}
                 if ascending
@@ -253,8 +254,8 @@ async def aiter_disk(
     )
 
     while True:
-        async with conn.aconnect() as sa_conn:
-            rows_fetch = await sa_conn.execute(
+        async with conn.asession() as session:
+            rows_fetch = await session.execute(
                 stmt, {"left_bound": rowid, "right_bound": bound}
             )
             rows = rows_fetch.all()
@@ -279,136 +280,6 @@ def extend_queue(
                     task_group.start_soon(clone.send, item)
 
     return extend
-
-
-def merge_cache(
-    instance: CacheTable | sa.Row[tuple[CacheTable]],
-    tags: set[TagTable],
-    sa_conn: SAConnection,
-) -> None:
-    if instance.id is None:
-        instance_id = sa_conn.execute(
-            sa.insert(CacheTable).returning(CacheTable.id),
-            {
-                "key": instance.key,
-                "raw": instance.raw,
-                "store_time": instance.store_time,
-                "access_time": instance.access_time,
-                "filepath": instance.filepath,
-                "value": instance.value,
-                "expire_time": instance.expire_time,
-                "mode": instance.mode,
-                "access_count": instance.access_count,
-                "size": instance.size,
-            },
-        ).scalar_one()
-    else:
-        instance_id = sa_conn.execute(
-            sa.update(CacheTable)
-            .where(CacheTable.id == instance.id)
-            .values(
-                store_time=instance.store_time,
-                access_time=instance.access_time,
-                filepath=instance.filepath,
-                value=instance.value,
-                expire_time=instance.expire_time,
-                mode=instance.mode,
-                access_count=instance.access_count,
-                size=instance.size,
-            )
-            .returning(CacheTable.id)
-        ).scalar_one()
-
-    sa_conn.execute(
-        sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance_id)
-    )
-    if not tags:
-        return
-    db_tags = sa_conn.execute(
-        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
-    ).all()
-    db_tags = {x.name: x.id for x in db_tags}
-    insert = [{"name": x.name} for x in tags if x.name not in db_tags]
-    if insert:
-        inserted = (
-            sa_conn.execute(sa.insert(TagTable).returning(TagTable.id), insert)
-            .scalars()
-            .all()
-        )
-    else:
-        inserted = []
-    sa_conn.execute(
-        sa.insert(CacheTagTable),
-        [
-            {"cache_id": instance_id, "tag_id": x}
-            for x in chain(inserted, db_tags.values())
-        ],
-    )
-
-
-async def async_merge_cache(
-    instance: CacheTable | sa.Row[tuple[CacheTable]],
-    tags: set[TagTable],
-    sa_conn: AsyncConnection,
-) -> None:
-    if instance.id is None:
-        instance_id = await sa_conn.execute(
-            sa.insert(CacheTable).returning(CacheTable.id),
-            {
-                "key": instance.key,
-                "raw": instance.raw,
-                "store_time": instance.store_time,
-                "access_time": instance.access_time,
-                "filepath": instance.filepath,
-                "value": instance.value,
-                "expire_time": instance.expire_time,
-                "mode": instance.mode,
-                "access_count": instance.access_count,
-                "size": instance.size,
-            },
-        )
-    else:
-        instance_id = await sa_conn.execute(
-            sa.update(CacheTable)
-            .where(CacheTable.id == instance.id)
-            .values(
-                store_time=instance.store_time,
-                access_time=instance.access_time,
-                filepath=instance.filepath,
-                value=instance.value,
-                expire_time=instance.expire_time,
-                mode=instance.mode,
-                access_count=instance.access_count,
-                size=instance.size,
-            )
-            .returning(CacheTable.id)
-        )
-    instance_id = instance_id.scalar_one()
-    await sa_conn.execute(
-        sa.delete(CacheTagTable).where(CacheTagTable.cache_id == instance_id)
-    )
-    if not tags:
-        return
-
-    db_tags = await sa_conn.execute(
-        sa.select(TagTable).where(TagTable.name.in_([x.name for x in tags]))
-    )
-    db_tags = {x.name: x.id for x in db_tags.all()}
-    insert = [{"name": x.name} for x in tags if x.name not in db_tags]
-    if insert:
-        inserted_fetch = await sa_conn.execute(
-            sa.insert(TagTable).returning(TagTable.id), insert
-        )
-        inserted = inserted_fetch.scalars().all()
-    else:
-        inserted = []
-    await sa_conn.execute(
-        sa.insert(CacheTagTable),
-        [
-            {"cache_id": instance_id, "tag_id": x}
-            for x in chain(inserted, db_tags.values())
-        ],
-    )
 
 
 def select_delete(  # noqa: PLR0913
@@ -482,11 +353,11 @@ def select_delete_process(  # noqa: PLR0913
     stacklevel: int = 2,
 ) -> None:
     while True:
-        with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
+        with transact(conn=conn, disk=disk, retry=retry) as (session, cleanup):
             logger.debug(
                 "Selecting rows with params: %s", params, stacklevel=stacklevel
             )
-            rows = sa_conn.execute(select_stmt, params).all()
+            rows = session.execute(select_stmt, params).all()
             if not rows:
                 logger.debug(
                     "No more rows to delete, params: %s", params, stacklevel=stacklevel
@@ -494,7 +365,7 @@ def select_delete_process(  # noqa: PLR0913
                 break
             logger.debug("Deleting rows: %d", len(rows), stacklevel=stacklevel)
             count_container[0] += len(rows)
-            sa_conn.execute(delete_stmt, {"ids": [row[0] for row in rows]})
+            session.execute(delete_stmt, {"ids": [row[0] for row in rows]})
 
             cleanup([row[1] for row in rows])
             params[params_key_mapping[0]] = rows[-1]._mapping[params_key_mapping[1]]  # noqa: SLF001
@@ -514,13 +385,13 @@ async def async_select_delete_process(  # noqa: PLR0913
 ) -> None:
     while True:
         async with async_transact(conn=conn, disk=disk, retry=retry) as (
-            sa_conn,
+            session,
             cleanup,
         ):
             logger.debug(
                 "Selecting rows with params: %s", params, stacklevel=stacklevel
             )
-            rows_fetch = await sa_conn.execute(select_stmt, params)
+            rows_fetch = await session.execute(select_stmt, params)
             rows = rows_fetch.all()
             if not rows:
                 logger.debug(
@@ -530,7 +401,7 @@ async def async_select_delete_process(  # noqa: PLR0913
 
             logger.debug("Deleting rows: %d", len(rows), stacklevel=stacklevel)
             count_container[0] += len(rows)
-            await sa_conn.execute(delete_stmt, {"ids": [row[0] for row in rows]})
+            await session.execute(delete_stmt, {"ids": [row[0] for row in rows]})
 
             await cleanup([row[1] for row in rows])
             params[params_key_mapping[0]] = rows[-1]._mapping[params_key_mapping[1]]  # noqa: SLF001
@@ -544,13 +415,13 @@ def transact(
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
-) -> Generator[tuple[SAConnection, CleanupFunc], None, None]:
+) -> Generator[tuple[Session, CleanupFunc], None, None]:
     filenames: list[str | PathLike[str] | None] = []
     with ExitStack() as stack:
-        sa_conn: SAConnection | None = None
-        while sa_conn is None:
+        session: Session | None = None
+        while session is None:
             stack.close()
-            sa_conn = transact_process(
+            session = transact_process(
                 stack, conn, disk, retry=retry, filename=filename
             )
 
@@ -559,12 +430,12 @@ def transact(
             logger.debug, "Exit transaction `%s`", filename, stacklevel=stacklevel + 2
         )
         try:
-            yield sa_conn, filenames.extend
+            yield session, filenames.extend
         except BaseException:
-            sa_conn.rollback()
+            session.rollback()
             raise
         else:
-            sa_conn.commit()
+            session.commit()
             for name in filenames:
                 if name is not None:
                     logger.debug("Cleanup `%s`", name, stacklevel=stacklevel)
@@ -579,17 +450,17 @@ async def async_transact(
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
-) -> AsyncGenerator[tuple[AsyncConnection, AsyncCleanupFunc], None]:
+) -> AsyncGenerator[tuple[AsyncSession, AsyncCleanupFunc], None]:
     import anyio
 
     send, receive = anyio.create_memory_object_stream["str | PathLike[str] | None"](
         1_000_000
     )
     async with AsyncExitStack() as stack:
-        sa_conn: AsyncConnection | None = None
-        while sa_conn is None:
+        session: AsyncSession | None = None
+        while session is None:
             await stack.aclose()
-            sa_conn = await async_transact_process(
+            session = await async_transact_process(
                 stack, conn, disk, retry=retry, filename=filename
             )
 
@@ -600,12 +471,12 @@ async def async_transact(
         try:
             stack.enter_context(receive)
             with send:
-                yield sa_conn, extend_queue(send)
+                yield session, extend_queue(send)
         except BaseException:
-            await sa_conn.rollback()
+            await session.rollback()
             raise
         else:
-            await sa_conn.commit()
+            await session.commit()
             async for name in receive:
                 if name is not None:
                     logger.debug("Cleanup `%s`", name, stacklevel=stacklevel)
@@ -647,16 +518,14 @@ def create_cache_instance(
     return instance, instance_tags, full_path
 
 
-def build_cache_instance(  # noqa: PLR0913
+def build_cache_instance(
     *,
     instance: CacheTable,
     disk: DiskProtocol,
     value: Any,
     key: Any,
     filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
-    instance_tags: set[TagTable],
 ) -> CacheTable:
-    instance.tags = instance_tags
     if filepath is None or filepath[0] is None or filepath[1] is None:
         instance.size, instance.mode, instance.filepath, instance.value = disk.store(
             value, key=key
@@ -670,16 +539,14 @@ def build_cache_instance(  # noqa: PLR0913
     return instance
 
 
-async def async_build_cache_instance(  # noqa: PLR0913
+async def async_build_cache_instance(
     *,
     instance: CacheTable,
     disk: DiskProtocol,
     value: Any,
     key: Any,
     filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
-    instance_tags: set[TagTable],
 ) -> CacheTable:
-    instance.tags = instance_tags
     if filepath is None or filepath[0] is None or filepath[1] is None:
         (
             instance.size,
@@ -737,13 +604,13 @@ def prepare_filter_stmt(
 
 
 def find_max_id(conn: Connection) -> int | None:
-    with conn.connect() as sa_conn:
-        return sa_conn.scalar(sa.select(sa.func.max(CacheTable.id)))
+    with conn.session() as session:
+        return session.scalar(sa.select(sa.func.max(CacheTable.id)))
 
 
 async def async_find_max_id(conn: Connection) -> int | None:
-    async with conn.aconnect() as sa_conn:
-        return await sa_conn.scalar(sa.select(sa.func.max(CacheTable.id)))
+    async with conn.asession() as session:
+        return await session.scalar(sa.select(sa.func.max(CacheTable.id)))
 
 
 def prepare_evict_stmt(
@@ -859,6 +726,7 @@ def prepare_pull_or_peek_stmt(
             CacheTable.key.desc() if side == QueueSide.BACK else CacheTable.key.asc()
         )
         .limit(1)
+        .options(selectinload(CacheTable.tags))
     )
 
 
@@ -870,8 +738,8 @@ def pull_process(
     default: tuple[str, Any] | None,
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
-    with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.execute(stmt).one_or_none()
+    with transact(conn=conn, disk=disk, retry=retry) as (session, cleanup):
+        row = session.execute(stmt).scalar_one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
             return Container(
@@ -881,7 +749,7 @@ def pull_process(
             )
 
         tags = set(row.tag_names)
-        sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+        session.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
         if (
             row.expire_time is not None
             and row.expire_time < time.time()
@@ -897,7 +765,7 @@ def pull_process(
         finally:
             if row.filepath is not None:
                 cleanup([row.filepath])
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
+        return row, value, tags
 
 
 async def apull_process(
@@ -910,7 +778,7 @@ async def apull_process(
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
         row_fetch = await sa_conn.execute(stmt)
-        row = row_fetch.one_or_none()
+        row = row_fetch.scalar_one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
             return Container(
@@ -919,15 +787,7 @@ async def apull_process(
                 default=True,
             )
 
-        tags_fetch = await sa_conn.execute(
-            sa.select(TagTable.name)
-            .select_from(
-                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
-            )
-            .where(CacheTagTable.cache_id == row.id)
-        )
-        tags = tags_fetch.scalars().all()
-        tags = set(tags)
+        tags = set(row.tag_names)
         await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
         if (
             row.expire_time is not None
@@ -946,7 +806,7 @@ async def apull_process(
         finally:
             if row.filepath is not None:
                 await cleanup([row.filepath])
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
+        return row, value, tags
 
 
 def peek_process(
@@ -958,7 +818,7 @@ def peek_process(
     retry: bool,
 ) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.execute(stmt).one_or_none()
+        row = sa_conn.execute(stmt).scalar_one_or_none()
         if row is None:
             logger.debug("No key found, use default key")
             return Container(
@@ -967,114 +827,6 @@ def peek_process(
                 default=True,
             )
 
-        tags = (
-            sa_conn.execute(
-                sa.select(TagTable.name)
-                .select_from(
-                    sa.join(
-                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
-                    )
-                )
-                .where(CacheTagTable.cache_id == row.id)
-            )
-            .scalars()
-            .all()
-        )
-        tags = set(tags)
-        if row.expire_time is not None and row.expire_time < time.time():
-            sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
-            if row.filepath:
-                cleanup([row.filepath])
-            return None
-
-        try:
-            value = disk.fetch(mode=row.mode, filename=row.filepath, value=row.value)
-        except OSError:
-            logger.error("File not found: %s", row.filepath)  # noqa: TRY400
-            sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
-            return None
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
-
-
-async def apeek_process(
-    *,
-    conn: Connection,
-    disk: DiskProtocol,
-    stmt: sa.Select[tuple[CacheTable]],
-    default: tuple[str, Any] | None,
-    retry: bool,
-) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
-    async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row_fetch = await sa_conn.execute(stmt)
-        row = row_fetch.one_or_none()
-        if row is None:
-            logger.debug("No key found, use default key")
-            return Container(
-                value=default[1] if default else None,
-                key=default[0] if default else None,
-                default=True,
-            )
-
-        tags_fetch = await sa_conn.execute(
-            sa.select(TagTable.name)
-            .select_from(
-                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
-            )
-            .where(CacheTagTable.cache_id == row.id)
-        )
-        tags = tags_fetch.scalars().all()
-        tags = set(tags)
-        if row.expire_time is not None and row.expire_time < time.time():
-            await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
-            if row.filepath:
-                await cleanup([row.filepath])
-            return None
-
-        try:
-            value = await disk.afetch(
-                mode=row.mode, filename=row.filepath, value=row.value
-            )
-        except OSError:
-            logger.error("File not found: %s", row.filepath)  # noqa: TRY400
-            await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
-            return None
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
-
-
-def peekitem_stmt(*, last: bool) -> sa.Select[tuple[CacheTable]]:
-    return (
-        sa.select(CacheTable)
-        .select_from(CacheTable)
-        .order_by(CacheTable.id.desc() if last else CacheTable.id.asc())
-        .limit(1)
-    )
-
-
-def peekitem_process(
-    *,
-    conn: Connection,
-    disk: DiskProtocol,
-    stmt: sa.Select[tuple[CacheTable]],
-    retry: bool,
-) -> tuple[CacheTable, Any, set[str]] | None:
-    with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
-        row = sa_conn.execute(stmt).one_or_none()
-        if row is None:
-            raise te.TypedDiskcacheKeyError("Cache is empty")
-
-        tags = (
-            sa_conn.execute(
-                sa.select(TagTable.name)
-                .select_from(
-                    sa.join(
-                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
-                    )
-                )
-                .where(CacheTagTable.cache_id == row.id)
-            )
-            .scalars()
-            .all()
-        )
         tags = set(row.tag_names)
         if row.expire_time is not None and row.expire_time < time.time():
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
@@ -1088,31 +840,29 @@ def peekitem_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
+        return row, value, tags
 
 
-async def apeekitem_process(
+async def apeek_process(
     *,
     conn: Connection,
     disk: DiskProtocol,
     stmt: sa.Select[tuple[CacheTable]],
+    default: tuple[str, Any] | None,
     retry: bool,
-) -> tuple[CacheTable, Any, set[str]] | None:
+) -> Container[Any] | tuple[CacheTable, Any, set[str]] | None:
     async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
         row_fetch = await sa_conn.execute(stmt)
-        row = row_fetch.one_or_none()
+        row = row_fetch.scalar_one_or_none()
         if row is None:
-            raise te.TypedDiskcacheKeyError("Cache is empty")
-
-        tags_fetch = await sa_conn.execute(
-            sa.select(TagTable.name)
-            .select_from(
-                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
+            logger.debug("No key found, use default key")
+            return Container(
+                value=default[1] if default else None,
+                key=default[0] if default else None,
+                default=True,
             )
-            .where(CacheTagTable.cache_id == row.id)
-        )
-        tags = tags_fetch.scalars().all()
-        tags = set(tags)
+
+        tags = set(row.tag_names)
         if row.expire_time is not None and row.expire_time < time.time():
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             if row.filepath:
@@ -1127,7 +877,76 @@ async def apeekitem_process(
             logger.error("File not found: %s", row.filepath)  # noqa: TRY400
             await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
             return None
-        return CacheTable(**row._mapping).update(id=row.id), value, tags  # noqa: SLF001
+        return row, value, tags
+
+
+def peekitem_stmt(*, last: bool) -> sa.Select[tuple[CacheTable]]:
+    return (
+        sa.select(CacheTable)
+        .select_from(CacheTable)
+        .order_by(CacheTable.id.desc() if last else CacheTable.id.asc())
+        .limit(1)
+        .options(selectinload(CacheTable.tags))
+    )
+
+
+def peekitem_process(
+    *,
+    conn: Connection,
+    disk: DiskProtocol,
+    stmt: sa.Select[tuple[CacheTable]],
+    retry: bool,
+) -> tuple[CacheTable, Any, set[str]] | None:
+    with transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
+        row = sa_conn.execute(stmt).scalar_one_or_none()
+        if row is None:
+            raise te.TypedDiskcacheKeyError("Cache is empty")
+
+        tags = set(row.tag_names)
+        if row.expire_time is not None and row.expire_time < time.time():
+            sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            if row.filepath:
+                cleanup([row.filepath])
+            return None
+
+        try:
+            value = disk.fetch(mode=row.mode, filename=row.filepath, value=row.value)
+        except OSError:
+            logger.error("File not found: %s", row.filepath)  # noqa: TRY400
+            sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            return None
+        return row, value, tags
+
+
+async def apeekitem_process(
+    *,
+    conn: Connection,
+    disk: DiskProtocol,
+    stmt: sa.Select[tuple[CacheTable]],
+    retry: bool,
+) -> tuple[CacheTable, Any, set[str]] | None:
+    async with async_transact(conn=conn, disk=disk, retry=retry) as (sa_conn, cleanup):
+        row_fetch = await sa_conn.execute(stmt)
+        row = row_fetch.scalar_one_or_none()
+        if row is None:
+            raise te.TypedDiskcacheKeyError("Cache is empty")
+
+        tags = set(row.tag_names)
+        if row.expire_time is not None and row.expire_time < time.time():
+            await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            if row.filepath:
+                await cleanup([row.filepath])
+            return None
+
+        try:
+            value = await disk.afetch(
+                mode=row.mode, filename=row.filepath, value=row.value
+            )
+        except OSError:
+            logger.error("File not found: %s", row.filepath)  # noqa: TRY400
+            await sa_conn.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+            return None
+        return row, value, tags
 
 
 def prepare_iterkeys_stmt(
@@ -1162,8 +981,8 @@ def prepare_iterkeys_stmt(
 
 
 async def acheck_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) -> None:
-    async with conn.aconnect() as sa_conn:
-        integrity_fetch = await sa_conn.execute(sa.text("PRAGMA integrity_check;"))
+    async with conn.asession() as session:
+        integrity_fetch = await session.execute(sa.text("PRAGMA integrity_check;"))
         integrity = integrity_fetch.scalars().all()
 
         if len(integrity) != 1 or integrity[0] != "ok":
@@ -1171,18 +990,18 @@ async def acheck_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) 
                 warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            await sa_conn.execute(sa.text("VACUUM;"))
+            await session.execute(sa.text("VACUUM;"))
 
 
 async def acheck_files(
     *,
-    connection: AsyncConnection,
+    session: AsyncSession,
     directory: str | PathLike[str],
     fix: bool,
     stacklevel: int = 2,
 ) -> None:
     filenames: set[AnyioPath] = set()
-    rows_fetch = await connection.execute(
+    rows_fetch = await session.execute(
         sa.select(
             CacheTable.id,
             CacheTable.size,
@@ -1195,7 +1014,7 @@ async def acheck_files(
 
     for row in rows:
         await acheck_file_exists(
-            connection=connection,
+            session=session,
             row=row,
             directory=directory,
             fix=fix,
@@ -1220,7 +1039,7 @@ async def acheck_files(
 
 async def acheck_file_exists(  # noqa: PLR0913
     *,
-    connection: AsyncConnection,
+    session: AsyncSession,
     row: sa.Row[tuple[int, int, str]],
     directory: str | PathLike[str],
     fix: bool,
@@ -1241,7 +1060,7 @@ async def acheck_file_exists(  # noqa: PLR0913
             warnings.warn(message, stacklevel=1)
 
             if fix:
-                await connection.execute(
+                await session.execute(
                     sa.update(CacheTable)
                     .where(CacheTable.id == row.id)
                     .values(size=real_size)
@@ -1252,7 +1071,7 @@ async def acheck_file_exists(  # noqa: PLR0913
     warnings.warn(message, stacklevel=stacklevel)
 
     if fix:
-        await connection.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+        await session.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
 
 
 async def acheck_unknown_file(
@@ -1300,15 +1119,15 @@ async def acheck_empty_dir(
 
 
 async def acheck_metadata_count(
-    *, connection: AsyncConnection, fix: bool, stacklevel: int = 2
+    *, session: AsyncSession, fix: bool, stacklevel: int = 2
 ) -> None:
-    meta_count_fetch = await connection.execute(
+    meta_count_fetch = await session.execute(
         sa.select(Metadata)
         .select_from(Metadata)
         .where(Metadata.key == MetadataKey.COUNT)
     )
     meta_count = meta_count_fetch.one()
-    cache_count_fetch = await connection.scalars(
+    cache_count_fetch = await session.scalars(
         sa.select(sa.func.count(CacheTable.id)).select_from(CacheTable)
     )
     cache_count = cache_count_fetch.one()
@@ -1318,7 +1137,7 @@ async def acheck_metadata_count(
         warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            await connection.execute(
+            await session.execute(
                 sa.update(Metadata)
                 .values(value=cache_count)
                 .where(Metadata.key == MetadataKey.COUNT)
@@ -1326,15 +1145,15 @@ async def acheck_metadata_count(
 
 
 async def acheck_metadata_size(
-    *, connection: AsyncConnection, fix: bool, stacklevel: int = 2
+    *, session: AsyncSession, fix: bool, stacklevel: int = 2
 ) -> None:
-    meta_size_fetch = await connection.execute(
+    meta_size_fetch = await session.execute(
         sa.select(Metadata)
         .select_from(Metadata)
         .where(Metadata.key == MetadataKey.SIZE)
     )
     meta_size = meta_size_fetch.scalars().one()
-    cache_size_fetch = await connection.scalars(
+    cache_size_fetch = await session.scalars(
         sa.select(sa.func.coalesce(sa.func.sum(CacheTable.size), 0)).select_from(
             CacheTable
         )
@@ -1346,7 +1165,7 @@ async def acheck_metadata_size(
         warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            await connection.execute(
+            await session.execute(
                 sa.update(Metadata)
                 .values(value=cache_size)
                 .where(Metadata.key == MetadataKey.SIZE)
@@ -1354,26 +1173,22 @@ async def acheck_metadata_size(
 
 
 def check_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) -> None:
-    with conn.connect() as sa_conn:
-        integrity = sa_conn.execute(sa.text("PRAGMA integrity_check;")).scalars().all()
+    with conn.session() as session:
+        integrity = session.execute(sa.text("PRAGMA integrity_check;")).scalars().all()
 
         if len(integrity) != 1 or integrity[0] != "ok":
             for message in integrity:
                 warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            sa_conn.execute(sa.text("VACUUM;"))
+            session.execute(sa.text("VACUUM;"))
 
 
 def check_files(
-    *,
-    connection: SAConnection,
-    directory: str | PathLike[str],
-    fix: bool,
-    stacklevel: int = 2,
+    *, session: Session, directory: str | PathLike[str], fix: bool, stacklevel: int = 2
 ) -> None:
     filenames: set[Path] = set()
-    rows = connection.execute(
+    rows = session.execute(
         sa.select(
             CacheTable.id,
             CacheTable.size,
@@ -1385,7 +1200,7 @@ def check_files(
 
     for row in rows:
         check_file_exists(
-            connection=connection,
+            session=session,
             row=row,
             directory=directory,
             fix=fix,
@@ -1410,7 +1225,7 @@ def check_files(
 
 def check_file_exists(  # noqa: PLR0913
     *,
-    connection: SAConnection,
+    session: Session,
     row: sa.Row[tuple[int, int, str]],
     directory: str | PathLike[str],
     fix: bool,
@@ -1429,7 +1244,7 @@ def check_file_exists(  # noqa: PLR0913
             warnings.warn(message, stacklevel=1)
 
             if fix:
-                connection.execute(
+                session.execute(
                     sa.update(CacheTable)
                     .where(CacheTable.id == row.id)
                     .values(size=real_size)
@@ -1440,7 +1255,7 @@ def check_file_exists(  # noqa: PLR0913
     warnings.warn(message, stacklevel=stacklevel)
 
     if fix:
-        connection.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
+        session.execute(sa.delete(CacheTable).where(CacheTable.id == row.id))
 
 
 def check_unknown_file(
@@ -1483,11 +1298,9 @@ def check_empty_dir(
             Path(dirpath).rmdir()
 
 
-def check_metadata_count(
-    *, connection: SAConnection, fix: bool, stacklevel: int = 2
-) -> None:
+def check_metadata_count(*, session: Session, fix: bool, stacklevel: int = 2) -> None:
     meta_count = (
-        connection.execute(
+        session.execute(
             sa.select(Metadata)
             .select_from(Metadata)
             .where(Metadata.key == MetadataKey.COUNT)
@@ -1495,7 +1308,7 @@ def check_metadata_count(
         .scalars()
         .one()
     )
-    cache_count = connection.scalars(
+    cache_count = session.scalars(
         sa.select(sa.func.count(CacheTable.id)).select_from(CacheTable)
     ).one()
 
@@ -1504,18 +1317,16 @@ def check_metadata_count(
         warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            connection.execute(
+            session.execute(
                 sa.update(Metadata)
                 .values(value=cache_count)
                 .where(Metadata.key == MetadataKey.COUNT)
             )
 
 
-def check_metadata_size(
-    *, connection: SAConnection, fix: bool, stacklevel: int = 2
-) -> None:
+def check_metadata_size(*, session: Session, fix: bool, stacklevel: int = 2) -> None:
     meta_size = (
-        connection.execute(
+        session.execute(
             sa.select(Metadata)
             .select_from(Metadata)
             .where(Metadata.key == MetadataKey.SIZE)
@@ -1523,7 +1334,7 @@ def check_metadata_size(
         .scalars()
         .one()
     )
-    cache_size = connection.scalars(
+    cache_size = session.scalars(
         sa.select(sa.func.coalesce(sa.func.sum(CacheTable.size), 0)).select_from(
             CacheTable
         )
@@ -1534,7 +1345,7 @@ def check_metadata_size(
         warnings.warn(message, stacklevel=stacklevel)
 
         if fix:
-            connection.execute(
+            session.execute(
                 sa.update(Metadata)
                 .values(value=cache_size)
                 .where(Metadata.key == MetadataKey.SIZE)
@@ -1572,3 +1383,26 @@ def prepare_update_settings_args(
     )
 
     return new_settings, update_settings | update_sqlite_settings, update_stmt
+
+
+def load_tags(tags: set[TagTable], session: Session) -> None:
+    db_tags = session.scalars(
+        sa.select(TagTable).where(TagTable.name.in_([tag.name for tag in tags]))
+    ).all()
+    tag_mapping = {tag.name: tag for tag in db_tags}
+    for tag in tags:
+        if tag.name in tag_mapping:
+            tags.remove(tag)
+            tags.add(tag_mapping[tag.name])
+
+
+async def async_load_tags(tags: set[TagTable], session: AsyncSession) -> None:
+    db_tags_fetch = await session.scalars(
+        sa.select(TagTable).where(TagTable.name.in_([tag.name for tag in tags]))
+    )
+    db_tags = db_tags_fetch.all()
+    tag_mapping = {tag.name: tag for tag in db_tags}
+    for tag in tags:
+        if tag.name in tag_mapping:
+            tags.remove(tag)
+            tags.add(tag_mapping[tag.name])

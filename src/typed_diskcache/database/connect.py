@@ -240,7 +240,7 @@ def ensure_sqlite_async_engine(
 
 
 @contextmanager
-def sync_transact(conn: Connection) -> Generator[Connection, None, None]:
+def sync_transact(conn: SyncConnT) -> Generator[SyncConnT, None, None]:
     is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
     if is_begin is False:
         conn.execute(sa.text("BEGIN IMMEDIATE;"))
@@ -257,9 +257,7 @@ def sync_transact(conn: Connection) -> Generator[Connection, None, None]:
 
 
 @asynccontextmanager
-async def async_transact(
-    conn: AsyncConnection,
-) -> AsyncGenerator[AsyncConnection, None]:
+async def async_transact(conn: AsyncConnT) -> AsyncGenerator[AsyncConnT, None]:
     async with _LOCK:
         is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
         if is_begin is False:
@@ -277,20 +275,18 @@ async def async_transact(
 
 
 @overload
-def transact(conn: Connection) -> AbstractContextManager[Connection]: ...
+def transact(conn: SyncConnT) -> AbstractContextManager[SyncConnT]: ...
 @overload
-def transact(conn: AsyncConnection) -> AbstractAsyncContextManager[AsyncConnection]: ...
+def transact(conn: AsyncConnT) -> AbstractAsyncContextManager[AsyncConnT]: ...
 @overload
 def transact(
-    conn: Connection | AsyncConnection,
-) -> (
-    AbstractContextManager[Connection] | AbstractAsyncContextManager[AsyncConnection]
-): ...
+    conn: SyncConnT | AsyncConnT,
+) -> AbstractContextManager[SyncConnT] | AbstractAsyncContextManager[AsyncConnT]: ...
 def transact(
-    conn: Connection | AsyncConnection,
-) -> AbstractContextManager[Connection] | AbstractAsyncContextManager[AsyncConnection]:
+    conn: SyncConnT | AsyncConnT,
+) -> AbstractContextManager[SyncConnT] | AbstractAsyncContextManager[AsyncConnT]:
     """transaction context manager"""
-    if isinstance(conn, AsyncConnection):
+    if isinstance(conn, (AsyncConnection, AsyncSession)):
         return async_transact(conn)
     return sync_transact(conn)
 

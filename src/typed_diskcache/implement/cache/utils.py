@@ -16,19 +16,14 @@ from typed_diskcache.core.types import Container, SettingsKey, SettingsKwargs
 from typed_diskcache.database import Connection
 from typed_diskcache.database.connect import transact as database_transact
 from typed_diskcache.database.model import Cache as CacheTable
-from typed_diskcache.database.model import CacheTag as CacheTagTable
 from typed_diskcache.database.model import Settings as SettingsTable
-from typed_diskcache.database.model import Tag as TagTable
 from typed_diskcache.database.revision import auto as revision_auto
 from typed_diskcache.log import get_logger
 from typed_diskcache.model import Settings, SQLiteSettings
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
-
-    from sqlalchemy.engine import Connection as SAConnection
-    from sqlalchemy.ext.asyncio import AsyncConnection
 
     from typed_diskcache.interface.disk import DiskProtocol
 
@@ -62,13 +57,16 @@ def init_args(
         sync_scopefunc=get_log_context,
         async_scopefunc=get_log_context,
     )
-    with conn.connect() as sa_conn:
+    with conn.session() as session:
+        sa_conn = session.connection()
         revision_auto(sa_conn)
 
-    with conn.connect() as sa_conn:
+    with conn.session() as session:
         logger.debug("Checking for existing cache settings")
         try:
-            setting_records = sa_conn.execute(sa.select(SettingsTable)).all()
+            setting_records: Sequence[SettingsTable] = (
+                session.execute(sa.select(SettingsTable)).scalars().all()
+            )
         except OperationalError:
             logger.debug("No existing cache settings found")
             setting_records = []
@@ -104,31 +102,21 @@ def init_args(
         for key, value in settings.sqlite_settings.model_dump(by_alias=True).items()
     ]
     settings_key_id = {x.key: x.id for x in setting_records}
-    with conn.connect() as sa_conn:
-        with database_transact(sa_conn):
+    with conn.session() as session:
+        with database_transact(session):
             for record in chain(new_setting_records, new_sqlite_setting_records):
                 if record.key in settings_key_id:
                     record.id = settings_key_id[record.key]
-                    sa_conn.execute(
-                        sa.update(SettingsTable)
-                        .where(SettingsTable.id == record.id)
-                        .values(value=record.value, modified_at=record.modified_at)
-                    )
+                    session.merge(record)
                 else:
-                    sa_conn.execute(
-                        sa.insert(SettingsTable).values(
-                            key=record.key,
-                            value=record.value,
-                            modified_at=record.modified_at,
-                        )
-                    )
-            sa_conn.commit()
+                    session.add(record)
+            session.commit()
 
     conn.update_settings(settings)
     conn.timeout = float(timeout)
 
-    with conn.connect() as sa_conn:
-        page_size = sa_conn.execute(sa.text("PRAGMA page_size;")).scalar_one()
+    with conn.session() as session:
+        page_size = session.execute(sa.text("PRAGMA page_size;")).scalar_one()
 
     return disk, conn, settings, page_size
 
@@ -141,50 +129,14 @@ def wrap_instnace(
     key: Any,
     value: _T,
     cache: CacheTable | sa.Row[tuple[CacheTable]],
-    connection_or_tags: SAConnection | set[str],
+    tags: set[str] | None = None,
 ) -> Container[_T]:
-    if isinstance(connection_or_tags, set):
-        tags = frozenset(connection_or_tags)
-    else:
-        tags = (
-            connection_or_tags.execute(
-                sa.select(TagTable.name)
-                .select_from(
-                    sa.join(
-                        TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id
-                    )
-                )
-                .where(CacheTagTable.cache_id == cache.id)
-            )
-            .scalars()
-            .all()
-        )
-        tags = frozenset(tags)
     return Container(
-        value=value, default=False, expire_time=cache.expire_time, tags=tags, key=key
-    )
-
-
-async def async_wrap_instnace(
-    key: Any,
-    value: _T,
-    cache: CacheTable | sa.Row[tuple[CacheTable]],
-    connection_or_tags: AsyncConnection | set[str],
-) -> Container[_T]:
-    if isinstance(connection_or_tags, set):
-        tags = frozenset(connection_or_tags)
-    else:
-        tags_fetch = await connection_or_tags.execute(
-            sa.select(TagTable.name)
-            .select_from(
-                sa.join(TagTable, CacheTagTable, TagTable.id == CacheTagTable.tag_id)
-            )
-            .where(CacheTagTable.cache_id == cache.id)
-        )
-        tags = tags_fetch.scalars().all()
-        tags = frozenset(tags)
-    return Container(
-        value=value, default=False, expire_time=cache.expire_time, tags=tags, key=key
+        value=value,
+        default=False,
+        expire_time=cache.expire_time,
+        tags=frozenset(cache.tag_names) if tags is None else frozenset(tags),
+        key=key,
     )
 
 
