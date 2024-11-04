@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DEFAULT_LOCK_TIMEOUT, SPIN_LOCK_SLEEP
-from typed_diskcache.core.context import context, enter_connection
+from typed_diskcache.core.context import context, enter_session
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncSemaphoreProtocol, SyncSemaphoreProtocol
 from typed_diskcache.log import get_logger
@@ -80,9 +80,9 @@ class SyncSemaphore(SyncSemaphoreProtocol):
         timeout = 0
         with ExitStack() as stack:
             while timeout < self.timeout:
-                sa_conn = stack.enter_context(self._cache.conn.connect())
-                stack.enter_context(transact(sa_conn))
-                context = stack.enter_context(enter_connection(sa_conn))
+                session = stack.enter_context(self._cache.conn.session())
+                stack.enter_context(transact(session))
+                context = stack.enter_context(enter_session(session))
                 container = context.run(self._cache.get, self.key, default=self._value)
                 container_value = validate_semaphore_value(container.value)
                 if container_value > 0:
@@ -104,9 +104,9 @@ class SyncSemaphore(SyncSemaphoreProtocol):
     @override
     def release(self) -> None:
         with ExitStack() as stack:
-            sa_conn = stack.enter_context(self._cache.conn.connect())
-            stack.enter_context(transact(sa_conn))
-            context = stack.enter_context(enter_connection(sa_conn))
+            session = stack.enter_context(self._cache.conn.session())
+            stack.enter_context(transact(session))
+            context = stack.enter_context(enter_session(session))
             container = context.run(self._cache.get, self.key, default=self._value)
             container_value = validate_semaphore_value(container.value)
             if self._value <= container_value:
@@ -197,11 +197,11 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
                 stack.enter_context(anyio.fail_after(self.timeout))
                 sub_stack = await stack.enter_async_context(AsyncExitStack())
                 while True:
-                    sa_conn = await sub_stack.enter_async_context(
-                        self._cache.conn.aconnect()
+                    session = await sub_stack.enter_async_context(
+                        self._cache.conn.asession()
                     )
-                    await sub_stack.enter_async_context(transact(sa_conn))
-                    context = stack.enter_context(enter_connection(sa_conn))
+                    await sub_stack.enter_async_context(transact(session))
+                    context = stack.enter_context(enter_session(session))
                     container = await context.run(
                         self._cache.aget, self.key, default=self._value
                     )
@@ -224,9 +224,9 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
     @override
     async def release(self) -> None:
         async with AsyncExitStack() as stack:
-            sa_conn = await stack.enter_async_context(self._cache.conn.aconnect())
-            await stack.enter_async_context(transact(sa_conn))
-            context = stack.enter_context(enter_connection(sa_conn))
+            session = await stack.enter_async_context(self._cache.conn.asession())
+            await stack.enter_async_context(transact(session))
+            context = stack.enter_context(enter_session(session))
             container = await context.run(
                 self._cache.aget, self.key, default=self._value
             )
