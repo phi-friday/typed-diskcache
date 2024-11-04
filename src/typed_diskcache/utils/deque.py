@@ -11,7 +11,7 @@ from typing_extensions import Self, TypeVar, Unpack, override
 
 from typed_diskcache import Cache
 from typed_diskcache import exception as te
-from typed_diskcache.core.context import context
+from typed_diskcache.core.context import context, enter_session
 from typed_diskcache.core.types import EvictionPolicy, SettingsKwargs
 from typed_diskcache.database.connect import transact
 from typed_diskcache.log import get_logger
@@ -120,10 +120,11 @@ class Deque(MutableSequence[_T], Generic[_T]):
             ```
         """
         self._maxlen = value
-        with self.cache.conn.connect() as sa_conn:
-            with transact(sa_conn):
-                while len(self.cache) > self._maxlen:
-                    self.popleft()
+        with self.cache.conn.session() as session:
+            with transact(session):
+                with enter_session(session) as context:
+                    while len(self.cache) > self._maxlen:
+                        context.run(self.popleft)
 
     @context("Deque.append")
     @override
@@ -147,11 +148,12 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['a', 'b', 'c']
             ```
         """
-        with self.cache.conn.connect() as sa_conn:
-            with transact(sa_conn):
-                self.cache.push(value, side="back", retry=True)
-                if len(self.cache) > self._maxlen:
-                    self.popleft()
+        with self.cache.conn.session() as session:
+            with transact(session):
+                with enter_session(session) as context:
+                    context.run(self.cache.push, value, side="back", retry=True)
+                    if len(self.cache) > self._maxlen:
+                        context.run(self.popleft)
 
     @context("Deque.appendleft")
     def appendleft(self, value: _T) -> None:
@@ -174,11 +176,12 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 # ['c', 'b', 'a']
             ```
         """
-        with self.cache.conn.connect() as sa_conn:
-            with transact(sa_conn):
-                self.cache.push(value, side="front", retry=True)
-                if len(self.cache) > self._maxlen:
-                    self.pop()
+        with self.cache.conn.session() as session:
+            with transact(session):
+                with enter_session(session) as context:
+                    context.run(self.cache.push, value, side="front", retry=True)
+                    if len(self.cache) > self._maxlen:
+                        context.run(self.pop)
 
     def copy(self) -> Self:
         """Copy deque with same directory and max length."""
