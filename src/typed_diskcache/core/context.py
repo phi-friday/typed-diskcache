@@ -14,16 +14,12 @@ from typed_diskcache.core.const import DEFAULT_LOG_CONTEXT, DEFAULT_LOG_THREAD
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-    from sqlalchemy.engine import Connection
-    from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
 __all__ = [
     "log_context",
     "context",
-    "conn_context",
-    "aconn_context",
-    "enter_connection",
     "session_context",
     "asession_context",
     "enter_session",
@@ -33,10 +29,6 @@ _F = TypeVar("_F", bound="Callable[..., Any]", infer_variance=True)
 
 log_context: ContextVar[tuple[str, int]] = ContextVar(
     "log_thread_context", default=(DEFAULT_LOG_CONTEXT, DEFAULT_LOG_THREAD)
-)
-conn_context: ContextVar[Connection | None] = ContextVar("conn_context", default=None)
-aconn_context: ContextVar[AsyncConnection | None] = ContextVar(
-    "aconn_context", default=None
 )
 session_context: ContextVar[Session | None] = ContextVar(
     "session_context", default=None
@@ -80,33 +72,6 @@ def context(func_or_context: _F | str) -> _F | Callable[[_F], _F]:
         return _context(func_or_context, name=name)
 
     return partial(_context, name=func_or_context)
-
-
-@contextmanager
-def enter_connection(
-    conn: Connection | AsyncConnection,
-) -> Generator[Context, None, None]:
-    """Enter the connection context.
-
-    Args:
-        conn: The connection to enter.
-
-    Yields:
-        Copy of the current context.
-    """
-    from sqlalchemy.ext.asyncio import AsyncConnection
-
-    if isinstance(conn, AsyncConnection):
-        token = aconn_context.set(conn)
-        reset_context = aconn_context.reset
-    else:
-        token = conn_context.set(conn)
-        reset_context = conn_context.reset
-    context = copy_context()
-    try:
-        yield context
-    finally:
-        reset_context(token)  # pyright: ignore[reportArgumentType]
 
 
 @contextmanager
