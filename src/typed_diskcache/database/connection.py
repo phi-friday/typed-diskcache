@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager, suppress
+from contextvars import Context, ContextVar
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -11,13 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
 from sqlalchemy.orm import Session
 
 from typed_diskcache import exception as te
-from typed_diskcache.core.context import asession_context, session_context
+from typed_diskcache.core.context import enter_session
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
+    from collections.abc import AsyncGenerator, Generator, Mapping
     from os import PathLike
 
     from sqlalchemy.engine import Connection as SAConnection
@@ -35,63 +36,46 @@ class Connection:
         self,
         database: str | PathLike[str],
         timeout: float,
-        sync_scopefunc: Callable[[], Any] | None = None,
-        async_scopefunc: Callable[[], Any] | None = None,
         settings: Settings | None = None,
     ) -> None:
         self._database = Path(database)
         self._timeout = timeout
 
-        self._sync_scopefunc = sync_scopefunc
-        self._async_scopefunc = async_scopefunc
         self._settings = settings
 
+        self_id = id(self)
+        self._context: ContextVar[Session | None] = ContextVar(
+            f"{self_id}-session", default=None
+        )
+        self._acontext: ContextVar[AsyncSession | None] = ContextVar(
+            f"{self_id}-asession", default=None
+        )
+
     def __getstate__(self) -> Mapping[str, Any]:
-        import cloudpickle
-
-        sync_scope = (
-            None
-            if self._sync_scopefunc is None
-            else cloudpickle.dumps(self._sync_scopefunc)
-        )
-        async_scope = (
-            None
-            if self._async_scopefunc is None
-            else cloudpickle.dumps(self._async_scopefunc)
-        )
-
         return {
             "database": str(self._database),
             "timeout": self._timeout,
-            "sync_scopefunc": sync_scope,
-            "async_scopefunc": async_scope,
             "settings": None
             if self._settings is None
             else self._settings.model_dump_json(),
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        import cloudpickle
-
         from typed_diskcache.model import Settings
 
         self._database = Path(state["database"])
         self.timeout = state["timeout"]
-        self._sync_scopefunc = (
-            None
-            if state["sync_scopefunc"] is None
-            else cloudpickle.loads(state["sync_scopefunc"])
-        )
-        self._async_scopefunc = (
-            None
-            if state["async_scopefunc"] is None
-            else cloudpickle.loads(state["async_scopefunc"])
-        )
         self._settings = (
             None
             if state["settings"] is None
             else Settings.model_validate_json(state["settings"])
         )
+
+        self_id = id(self)
+        if not hasattr(self, "_context"):
+            self._context = ContextVar(f"{self_id}-session", default=None)
+        if not hasattr(self, "_acontext"):
+            self._acontext = ContextVar(f"{self_id}-asession", default=None)
 
     @property
     def timeout(self) -> float:
@@ -135,7 +119,7 @@ class Connection:
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
         """Connect to the database."""
-        session = session_context.get()
+        session = self._context.get()
         if session is not None:
             yield session
             return
@@ -153,7 +137,7 @@ class Connection:
     @asynccontextmanager
     async def asession(self) -> AsyncGenerator[AsyncSession, None]:
         """Connect to the database."""
-        session = asession_context.get()
+        session = self._acontext.get()
         if session is not None:
             await anyio.lowlevel.checkpoint()
             yield session
@@ -195,6 +179,24 @@ class Connection:
         """Update the settings."""
         self.close()
         self._settings = settings
+
+    @contextmanager
+    def enter_session(
+        self, session: Session | AsyncSession
+    ) -> Generator[Context, None, None]:
+        """Enter the session context.
+
+        Args:
+            session: The session to enter.
+
+        Yields:
+            Copy of the current context.
+        """
+        context_var = (
+            self._acontext if isinstance(session, AsyncSession) else self._context
+        )
+        with enter_session(session, context_var) as context:  # pyright: ignore[reportArgumentType]
+            yield context
 
     @property
     def eviction(self) -> Eviction:

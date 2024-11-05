@@ -11,7 +11,7 @@ from typing_extensions import override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DEFAULT_LOCK_TIMEOUT, SPIN_LOCK_SLEEP
-from typed_diskcache.core.context import context, enter_session
+from typed_diskcache.core.context import context
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncLockProtocol, SyncLockProtocol
 from typed_diskcache.log import get_logger
@@ -124,7 +124,7 @@ class SyncRLock(SyncLock):
             while timeout < self.timeout:
                 session = stack.enter_context(self._cache.conn.session())
                 stack.enter_context(transact(session))
-                context = stack.enter_context(enter_session(session))
+                context = stack.enter_context(self._cache.conn.enter_session(session))
                 container = context.run(
                     self._cache.get, self.key, default=("default", 0)
                 )
@@ -156,7 +156,7 @@ class SyncRLock(SyncLock):
         with ExitStack() as stack:
             session = stack.enter_context(self._cache.conn.session())
             stack.enter_context(transact(session))
-            context = stack.enter_context(enter_session(session))
+            context = stack.enter_context(self._cache.conn.enter_session(session))
             container = context.run(self._cache.get, self.key, default=("default", 0))
             container_value = validate_lock_value(container.value)
             if (
@@ -282,7 +282,9 @@ class AsyncRLock(AsyncLock):
                         self._cache.conn.asession()
                     )
                     await sub_stack.enter_async_context(transact(session))
-                    context = stack.enter_context(enter_session(session))
+                    context = stack.enter_context(
+                        self._cache.conn.enter_session(session)
+                    )
                     container = await context.run(
                         self._cache.aget, self.key, default=("default", 0)
                     )
@@ -314,7 +316,7 @@ class AsyncRLock(AsyncLock):
         async with AsyncExitStack() as stack:
             session = await stack.enter_async_context(self._cache.conn.asession())
             await stack.enter_async_context(transact(session))
-            context = stack.enter_context(enter_session(session))
+            context = stack.enter_context(self._cache.conn.enter_session(session))
             container = await self._cache.aget(self.key, default=("default", 0))
             container_value = validate_lock_value(container.value)
             if (

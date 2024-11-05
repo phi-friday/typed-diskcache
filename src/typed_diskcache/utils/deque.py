@@ -11,7 +11,7 @@ from typing_extensions import Self, TypeVar, Unpack, override
 
 from typed_diskcache import Cache
 from typed_diskcache import exception as te
-from typed_diskcache.core.context import context, enter_session
+from typed_diskcache.core.context import context
 from typed_diskcache.core.types import EvictionPolicy, SettingsKwargs
 from typed_diskcache.database.connect import transact
 from typed_diskcache.log import get_logger
@@ -97,7 +97,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         return self._maxlen
 
     @maxlen.setter
-    @context("Deque.maxlen")
+    @context
     def maxlen(self, value: float) -> None:
         """Set max length of the deque.
 
@@ -122,11 +122,11 @@ class Deque(MutableSequence[_T], Generic[_T]):
         self._maxlen = value
         with self.cache.conn.session() as session:
             with transact(session):
-                with enter_session(session) as context:
+                with self._cache.conn.enter_session(session) as context:
                     while len(self.cache) > self._maxlen:
                         context.run(self.popleft)
 
-    @context("Deque.append")
+    @context
     @override
     def append(self, value: _T) -> None:
         """Add `value` to back of deque.
@@ -150,12 +150,12 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         with self.cache.conn.session() as session:
             with transact(session):
-                with enter_session(session) as context:
+                with self._cache.conn.enter_session(session) as context:
                     context.run(self.cache.push, value, side="back", retry=True)
                     if len(self.cache) > self._maxlen:
                         context.run(self.popleft)
 
-    @context("Deque.appendleft")
+    @context
     def appendleft(self, value: _T) -> None:
         """Add `value` to front of deque.
 
@@ -178,7 +178,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         with self.cache.conn.session() as session:
             with transact(session):
-                with enter_session(session) as context:
+                with self._cache.conn.enter_session(session) as context:
                     context.run(self.cache.push, value, side="front", retry=True)
                     if len(self.cache) > self._maxlen:
                         context.run(self.pop)
@@ -218,7 +218,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """
         return sum(1 for item in self if item == value)
 
-    @context("Deque.extend")
+    @context
     @override
     def extend(self, values: Iterable[_T]) -> None:
         """Extend back side of deque with values from `iterable`.
@@ -241,7 +241,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         for value in values:
             self.append(value)
 
-    @context("Deque.extendleft")
+    @context
     def extendleft(self, values: Iterable[_T]) -> None:
         """Extend front side of deque with values from `iterable`.
 

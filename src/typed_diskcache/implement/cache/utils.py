@@ -11,7 +11,6 @@ from typing_extensions import TypeVar
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import DBNAME
-from typed_diskcache.core.context import log_context
 from typed_diskcache.core.types import Container, SettingsKey, SettingsKwargs
 from typed_diskcache.database import Connection
 from typed_diskcache.database.connect import transact as database_transact
@@ -51,12 +50,7 @@ def init_args(
                 )
                 raise te.TypedDiskcacheOSError(exc.errno, error_msg) from exc
 
-    conn = Connection(
-        directory / DBNAME,
-        0,
-        sync_scopefunc=get_log_context,
-        async_scopefunc=get_log_context,
-    )
+    conn = Connection(directory / DBNAME, 0)
     with conn.session() as session:
         sa_conn = session.connection()
         revision_auto(sa_conn)
@@ -138,10 +132,6 @@ def wrap_instnace(
         tags=frozenset(cache.tag_names) if tags is None else frozenset(tags),
         key=key,
     )
-
-
-def get_log_context() -> tuple[str, int]:
-    return log_context.get()
 
 
 def combine_settings(

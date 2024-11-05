@@ -13,7 +13,7 @@ from typing_extensions import TypeAlias, TypeVar, Unpack, override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
-from typed_diskcache.core.context import context, enter_session
+from typed_diskcache.core.context import context
 from typed_diskcache.core.types import (
     Container,
     EvictionPolicy,
@@ -731,7 +731,7 @@ class Cache(CacheProtocol):
                 .where(SettingsTable.key == SettingsKey.STATISTICS)
                 .values(value=enable)
             )
-            with enter_session(session) as context:
+            with self.conn.enter_session(session) as context:
                 context.run(
                     self.update_settings,
                     self.settings.model_copy(update={"statistics": enable}),
@@ -767,7 +767,7 @@ class Cache(CacheProtocol):
                 .where(SettingsTable.key == SettingsKey.STATISTICS)
                 .values(value=enable)
             )
-            with enter_session(session) as context:
+            with self.conn.enter_session(session) as context:
                 await context.run(
                     self.aupdate_settings,
                     self.settings.model_copy(update={"statistics": enable}),

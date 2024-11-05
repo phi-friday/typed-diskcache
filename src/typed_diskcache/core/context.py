@@ -17,24 +17,13 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
-__all__ = [
-    "log_context",
-    "context",
-    "session_context",
-    "asession_context",
-    "enter_session",
-]
+__all__ = ["log_context", "context", "enter_session"]
 
 _F = TypeVar("_F", bound="Callable[..., Any]", infer_variance=True)
+_T = TypeVar("_T", bound="Session | AsyncSession", infer_variance=True)
 
 log_context: ContextVar[tuple[str, int]] = ContextVar(
     "log_thread_context", default=(DEFAULT_LOG_CONTEXT, DEFAULT_LOG_THREAD)
-)
-session_context: ContextVar[Session | None] = ContextVar(
-    "session_context", default=None
-)
-asession_context: ContextVar[AsyncSession | None] = ContextVar(
-    "asession_context", default=None
 )
 
 
@@ -75,28 +64,24 @@ def context(func_or_context: _F | str) -> _F | Callable[[_F], _F]:
 
 
 @contextmanager
-def enter_session(session: Session | AsyncSession) -> Generator[Context, None, None]:
+def enter_session(
+    session: _T, context_var: ContextVar[_T | None]
+) -> Generator[Context, None, None]:
     """Enter the session context.
 
     Args:
         session: The session to enter.
+        context_var: The context variable to set.
 
     Yields:
         Copy of the current context.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    if isinstance(session, AsyncSession):
-        token = asession_context.set(session)
-        reset_context = asession_context.reset
-    else:
-        token = session_context.set(session)
-        reset_context = session_context.reset
+    token = context_var.set(session)
     context = copy_context()
     try:
         yield context
     finally:
-        reset_context(token)  # pyright: ignore[reportArgumentType]
+        context_var.reset(token)
 
 
 def _context(func: _F, *, name: str) -> _F:
