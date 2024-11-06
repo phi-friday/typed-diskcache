@@ -1,54 +1,25 @@
 from __future__ import annotations
 
-import inspect
 import pickle
 import time
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, wait
-from contextlib import suppress
 from functools import partial
 from itertools import product
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import anyio
 import anyio.lowlevel
 import pytest
 
 import typed_diskcache
+from tests.base import AsyncWrapper
 from typed_diskcache import exception as te
 from typed_diskcache import interface
 from typed_diskcache.database import Connection
 from typed_diskcache.model import Settings
 
 pytestmark = pytest.mark.anyio
-
-
-class CacheWrapper:
-    def __init__(self, cache: interface.CacheProtocol, *, is_async: bool) -> None:
-        self.__cache = cache
-        self.__is_async = is_async
-
-    def __getattr__(self, name: str) -> Any:
-        value = getattr(self.__cache, name)
-        if callable(value) and name.startswith("a") and not self.__is_async:
-            with suppress(AttributeError):
-                value = getattr(self.__cache, name[1:])
-        if not callable(value):
-            return value
-
-        return unwrap(value)
-
-
-def unwrap(func: Callable[..., Any]) -> Any:
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        value = func(*args, **kwargs)
-        if inspect.isawaitable(value):
-            return await value
-        await anyio.lowlevel.checkpoint()
-        return value
-
-    return wrapper
 
 
 @pytest.mark.parametrize(
@@ -76,7 +47,7 @@ class TestCache:
         else:
             error_msg = f"Unknown cache type: {cache_type}"
             raise RuntimeError(error_msg)
-        self.cache = CacheWrapper(self.origin_cache, is_async=is_async)  # pyright: ignore[reportAttributeAccessIssue]
+        self.cache = AsyncWrapper(self.origin_cache, is_async=is_async)
         try:
             yield None
         finally:

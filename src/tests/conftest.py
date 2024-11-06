@@ -27,7 +27,8 @@ def cache_directory(tmp_path_factory: pytest.TempPathFactory):
     try:
         yield path
     finally:
-        shutil.rmtree(path)
+        if path.exists():
+            shutil.rmtree(path)
 
 
 @pytest.fixture
