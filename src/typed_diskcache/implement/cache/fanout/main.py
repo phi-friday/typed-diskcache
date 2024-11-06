@@ -83,6 +83,7 @@ class FanoutCache(CacheProtocol):
         if directory is None:
             directory = tempfile.mkdtemp(prefix="typed-diskcache-")
         directory = Path(directory)
+        directory = cache_utils.ensure_cache_directory(directory)
         directory = directory.expanduser()
         directory = Path(expandvars(directory))
 

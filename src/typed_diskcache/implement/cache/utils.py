@@ -32,13 +32,14 @@ _T = TypeVar("_T", infer_variance=True)
 logger = get_logger()
 
 
-def init_args(
-    directory: Path,
-    disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None,
-    disk_args: Mapping[str, Any] | None,
-    timeout: float = 60,
-    **kwargs: Any,
-) -> tuple[DiskProtocol, Connection, Settings, int]:
+def touch_gitignore(directory: Path) -> None:
+    gitignore = directory / ".gitignore"
+    if not gitignore.exists():
+        with gitignore.open("w") as file:
+            file.write("*\n")
+
+
+def ensure_cache_directory(directory: Path) -> Path:
     if not directory.exists() or not directory.is_dir():
         try:
             directory.mkdir(parents=True, exist_ok=False)
@@ -49,6 +50,18 @@ def init_args(
                     " and could not be created"
                 )
                 raise te.TypedDiskcacheOSError(exc.errno, error_msg) from exc
+    touch_gitignore(directory)
+    return directory
+
+
+def init_args(
+    directory: Path,
+    disk_type: type[DiskProtocol] | Callable[..., DiskProtocol] | None,
+    disk_args: Mapping[str, Any] | None,
+    timeout: float = 60,
+    **kwargs: Any,
+) -> tuple[DiskProtocol, Connection, Settings, int]:
+    directory = ensure_cache_directory(directory)
 
     conn = Connection(directory / DBNAME, 0)
     with conn.session() as session:
