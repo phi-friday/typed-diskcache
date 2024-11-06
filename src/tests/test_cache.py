@@ -13,7 +13,7 @@ import anyio.lowlevel
 import pytest
 
 import typed_diskcache
-from tests.base import AsyncWrapper
+from tests.base import AsyncWrapper, value_params
 from typed_diskcache import exception as te
 from typed_diskcache import interface
 from typed_diskcache.database import Connection
@@ -56,7 +56,7 @@ class TestCache:
     def test_is_cache(self):
         assert isinstance(self.origin_cache, interface.CacheProtocol)
 
-    def test_cache_attributes(self):
+    def test_attributes(self):
         assert isinstance(self.origin_cache.directory, Path)
         assert isinstance(self.origin_cache.timeout, float)
         assert isinstance(self.origin_cache.disk, interface.DiskProtocol)
@@ -64,7 +64,7 @@ class TestCache:
         assert isinstance(self.origin_cache.settings, Settings)
         assert self.origin_cache.settings is self.origin_cache.conn._settings  # noqa: SLF001
 
-    def test_cache_settings(self):
+    def test_settings(self):
         settings = self.cache.settings
         default_settings = Settings()
         exclude = {"serialized_disk", "size_limit"}
@@ -110,20 +110,7 @@ class TestCache:
         del self.origin_cache[key]
         assert key not in self.origin_cache
 
-    @pytest.mark.parametrize(
-        "value",
-        [
-            None,
-            pytest.param((None,) * 2**20, id="tuple"),
-            1234,
-            pytest.param(2**512, id="big_int"),
-            56.78,
-            "hello",
-            pytest.param("hello" * 2**20, id="big_str"),
-            b"world",
-            pytest.param(b"world" * 2**20, id="big_bytes"),
-        ],
-    )
+    @value_params
     def test_getsetdel_item(self, value):
         key = 0
         assert len(self.origin_cache) == 0
@@ -207,20 +194,7 @@ class TestCache:
         await anyio.sleep(0.1)
         assert (await self.cache.aget(key)).default
 
-    @pytest.mark.parametrize(
-        "value",
-        [
-            None,
-            pytest.param((None,) * 2**20, id="tuple"),
-            1234,
-            pytest.param(2**512, id="big_int"),
-            56.78,
-            "hello",
-            pytest.param("hello" * 2**20, id="big_str"),
-            b"world",
-            pytest.param(b"world" * 2**20, id="big_bytes"),
-        ],
-    )
+    @value_params
     async def test_getsetdel(self, value):
         key = 0
         assert len(self.origin_cache) == 0

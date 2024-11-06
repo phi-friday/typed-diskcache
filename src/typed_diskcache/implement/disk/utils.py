@@ -123,8 +123,8 @@ async def async_write(
 
 
 def ensure_filepath(
-    disk: DiskProtocol, key: Any, value: Any, filepath: tuple[Path, Path] | None
-) -> tuple[Path, Path]:
+    disk: DiskProtocol, key: Any, value: Any, filepath: Path | None
+) -> Path:
     if filepath is not None:
         return filepath
     return disk.filename(key, value)

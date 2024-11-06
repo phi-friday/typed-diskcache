@@ -431,7 +431,9 @@ class Cache(CacheProtocol):
                 disk=self.disk,
                 value=value,
                 key=key,
-                filepath=(instance.filepath, full_path),
+                filepath=default_utils.merge_filepath(
+                    self.disk, instance.filepath, full_path
+                ),
             )
             default_utils.load_tags(instance_tags, session)
             if row is None:
@@ -482,7 +484,9 @@ class Cache(CacheProtocol):
                 disk=self.disk,
                 value=value,
                 key=key,
-                filepath=(instance.filepath, full_path),
+                filepath=default_utils.merge_filepath(
+                    self.disk, instance.filepath, full_path
+                ),
             )
             await default_utils.async_load_tags(instance_tags, session)
             if row is None:
@@ -888,7 +892,9 @@ class Cache(CacheProtocol):
                 disk=self.disk,
                 value=value,
                 key=key,
-                filepath=(instance.filepath, full_path),
+                filepath=default_utils.merge_filepath(
+                    self.disk, instance.filepath, full_path
+                ),
             )
             default_utils.load_tags(instance_tags, session)
             if row is None:
@@ -945,7 +951,9 @@ class Cache(CacheProtocol):
                 disk=self.disk,
                 value=value,
                 key=key,
-                filepath=(instance.filepath, full_path),
+                filepath=default_utils.merge_filepath(
+                    self.disk, instance.filepath, full_path
+                ),
             )
             await default_utils.async_load_tags(instance_tags, session)
             if row is None:
@@ -1152,7 +1160,9 @@ class Cache(CacheProtocol):
                     disk=self.disk,
                     value=value,
                     key=key,
-                    filepath=(instance.filepath, full_path),
+                    filepath=default_utils.merge_filepath(
+                        self.disk, instance.filepath, full_path
+                    ),
                 )
                 default_utils.load_tags(instance_tags, session)
                 session.add(instance)
@@ -1187,7 +1197,9 @@ class Cache(CacheProtocol):
                     disk=self.disk,
                     value=value,
                     key=key,
-                    filepath=(instance.filepath, full_path),
+                    filepath=default_utils.merge_filepath(
+                        self.disk, instance.filepath, full_path
+                    ),
                 )
                 default_utils.load_tags(instance_tags, session)
                 instance.tags = instance_tags
@@ -1258,7 +1270,9 @@ class Cache(CacheProtocol):
                     disk=self.disk,
                     value=value,
                     key=key,
-                    filepath=(instance.filepath, full_path),
+                    filepath=default_utils.merge_filepath(
+                        self.disk, instance.filepath, full_path
+                    ),
                 )
                 await default_utils.async_load_tags(instance_tags, session)
                 session.add(instance)
@@ -1295,7 +1309,9 @@ class Cache(CacheProtocol):
                     disk=self.disk,
                     value=value,
                     key=key,
-                    filepath=(instance.filepath, full_path),
+                    filepath=default_utils.merge_filepath(
+                        self.disk, instance.filepath, full_path
+                    ),
                 )
                 await default_utils.async_load_tags(instance_tags, session)
                 await session.run_sync(

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Generic
 
 import anyio
 import anyio.lowlevel
+import pytest
 from typing_extensions import TypeVar
 
 _T = TypeVar("_T", infer_variance=True)
@@ -41,3 +42,19 @@ def unwrap(func: Callable[..., Any]) -> Any:
         return value
 
     return wrapper
+
+
+value_params = pytest.mark.parametrize(
+    "value",
+    (
+        pytest.param(None, id="none"),
+        pytest.param((None,) * 2**20, id="tuple"),
+        pytest.param(1234, id="int"),
+        pytest.param(2**512, id="long_int"),
+        pytest.param(56.78, id="float"),
+        pytest.param("hello", id="str"),
+        pytest.param("hello" * 2**20, id="long_str"),
+        pytest.param(b"world", id="bytes"),
+        pytest.param(b"world" * 2**20, id="long_bytes"),
+    ),
+)

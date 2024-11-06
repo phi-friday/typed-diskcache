@@ -73,22 +73,22 @@ class DiskProtocol(Protocol):
             The corresponding Python key.
         """
 
-    def prepare(self, value: Any, *, key: Any = ...) -> tuple[Path, Path] | None:
+    def prepare(self, value: Any, *, key: Any = ...) -> Path | None:
         """Prepare filename and full-path tuple for file storage.
 
-        This method takes a value and an optional key, and prepares a tuple
-        containing the filename and the full path for storing the file.
+        This method takes a value and an optional key, and prepares
+        a full path for storing the file.
 
         Args:
             value: The value to store.
             key: The key for the item (optional).
 
         Returns:
-            A tuple containing the filename and full path, or None if preparation fails.
+            A full path, or None if preparation fails.
         """
 
     def store(
-        self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
+        self, value: Any, *, key: Any = ..., filepath: Path | None = ...
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
         """Convert `value` to fields for Cache table.
 
@@ -98,14 +98,14 @@ class DiskProtocol(Protocol):
         Args:
             value: The value to store.
             key: The key for the item.
-            filepath: A tuple containing the filename and full path.
+            filepath: The full path for the file.
 
         Returns:
             (size, mode, filename, value) tuple for Cache table
         """
 
     async def astore(
-        self, value: Any, *, key: Any = ..., filepath: tuple[Path, Path] | None = ...
+        self, value: Any, *, key: Any = ..., filepath: Path | None = ...
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
         """Asynchronously convert `value` to fields for Cache table.
 
@@ -117,7 +117,7 @@ class DiskProtocol(Protocol):
         Args:
             value: The value to store.
             key: The key for the item.
-            filepath: A tuple containing the filename and full path.
+            filepath: The full path for the file.
 
         Returns:
             (size, mode, filename, value) tuple for Cache table
@@ -181,8 +181,8 @@ class DiskProtocol(Protocol):
             file_path: The relative path to the file.
         """
 
-    def filename(self, key: Any = ..., value: Any = ...) -> tuple[Path, Path]:
-        """Return filename and full-path tuple for file storage.
+    def filename(self, key: Any = ..., value: Any = ...) -> Path:
+        """Return full-path for file storage.
 
         Filename will be a randomly generated 28 character hexadecimal string
         with ".val" suffixed. Two levels of sub-directories will be used to
@@ -196,7 +196,7 @@ class DiskProtocol(Protocol):
             value: value for item.
 
         Returns:
-            filename and full-path tuple
+            full-path
         """
 
     def model_dump(self) -> tuple[str, dict[str, Any]]:

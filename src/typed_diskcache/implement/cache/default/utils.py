@@ -494,7 +494,8 @@ def create_cache_instance(
     now = time.time()
     db_key, raw = disk.put(key)
     expire_time = None if expire is None else now + expire
-    filename, full_path = disk.prepare(value, key=key) or (None, None)
+    full_path = disk.prepare(value, key=key)
+    filename = None if full_path is None else full_path.relative_to(disk.directory)
     if isinstance(tags, str):
         tags = [tags]
     if tags is not None:
@@ -524,17 +525,15 @@ def build_cache_instance(
     disk: DiskProtocol,
     value: Any,
     key: Any,
-    filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
+    filepath: Path | None,
 ) -> CacheTable:
-    if filepath is None or filepath[0] is None or filepath[1] is None:
+    if filepath is None:
         instance.size, instance.mode, instance.filepath, instance.value = disk.store(
             value, key=key
         )
     else:
         instance.size, instance.mode, instance.filepath, instance.value = disk.store(
-            value,
-            key=key,
-            filepath=filepath,  # pyright: ignore[reportArgumentType]
+            value, key=key, filepath=filepath
         )
     return instance
 
@@ -545,9 +544,9 @@ async def async_build_cache_instance(
     disk: DiskProtocol,
     value: Any,
     key: Any,
-    filepath: tuple[str | PathLike[str] | None, str | PathLike[str] | None] | None,
+    filepath: Path | None,
 ) -> CacheTable:
-    if filepath is None or filepath[0] is None or filepath[1] is None:
+    if filepath is None:
         (
             instance.size,
             instance.mode,
@@ -560,11 +559,7 @@ async def async_build_cache_instance(
             instance.mode,
             instance.filepath,
             instance.value,
-        ) = await disk.astore(
-            value,
-            key=key,
-            filepath=filepath,  # pyright: ignore[reportArgumentType]
-        )
+        ) = await disk.astore(value, key=key, filepath=filepath)
     return instance
 
 
@@ -1406,3 +1401,11 @@ async def async_load_tags(tags: set[TagTable], session: AsyncSession) -> None:
         if tag.name in tag_mapping:
             tags.remove(tag)
             tags.add(tag_mapping[tag.name])
+
+
+def merge_filepath(
+    disk: DiskProtocol, filepath: str | None, full_path: Path | None
+) -> Path | None:
+    if filepath:
+        return disk.directory / filepath
+    return full_path

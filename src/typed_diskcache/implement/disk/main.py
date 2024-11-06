@@ -72,7 +72,7 @@ class Disk(DiskProtocol):
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
-            f"{str(self._directory)!r}, "
+            f"{str(self.directory)!r}, "
             f"min_file_size={self.min_file_size!r}"
             ")"
         )
@@ -108,7 +108,7 @@ class Disk(DiskProtocol):
 
     @context
     @override
-    def prepare(self, value: Any, *, key: Any = UNKNOWN) -> tuple[Path, Path] | None:
+    def prepare(self, value: Any, *, key: Any = UNKNOWN) -> Path | None:
         if value is None:
             logger.debug("Maybe storing null value")
             return None
@@ -116,29 +116,28 @@ class Disk(DiskProtocol):
             if len(value) < self.min_file_size:
                 logger.debug("Maybe storing raw value(string)")
 
-            filename, full_path = self.filename(key, value)
+            full_path = self.filename(key, value)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Maybe storing text value to `%s`", filename)
-            return filename, full_path
+            return full_path
         if isinstance(value, bytes):
             if len(value) < self.min_file_size:
                 logger.debug("Maybe storing raw value(bytes)")
                 return None
-            filename, full_path = self.filename(key, value)
+            full_path = self.filename(key, value)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Maybe storing binary value to `%s`", filename)
-            return filename, full_path
+            return full_path
 
-        filename, full_path = self.filename(key, value)
+        full_path = self.filename(key, value)
+        filename = full_path.relative_to(self.directory)
         logger.debug("Maybe store pickled value to `%s`", filename)
-        return filename, full_path
+        return full_path
 
     @context
     @override
     def store(  # noqa: PLR0911
-        self,
-        value: Any,
-        *,
-        key: Any = UNKNOWN,
-        filepath: tuple[Path, Path] | None = None,
+        self, value: Any, *, key: Any = UNKNOWN, filepath: Path | None = None
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
         if value is None:
             logger.debug("Storing null value")
@@ -149,7 +148,8 @@ class Disk(DiskProtocol):
                 logger.debug("Storing raw value(string)")
                 return 0, CacheMode.TEXT, None, value.encode()
 
-            filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Storing text value to `%s`", filename)
             disk_utils.write(full_path, io.StringIO(value), "x", "UTF-8")
             size = full_path.stat().st_size
@@ -161,7 +161,8 @@ class Disk(DiskProtocol):
                 logger.debug("Storing raw value(bytes)")
                 return 0, CacheMode.BINARY, None, value
 
-            filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Storing binary value to `%s`", filename)
             disk_utils.write(full_path, io.BytesIO(value), "xb")
             size = full_path.stat().st_size
@@ -178,7 +179,8 @@ class Disk(DiskProtocol):
             self.min_file_size,
         )
 
-        filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+        full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+        filename = full_path.relative_to(self.directory)
         logger.debug("Storing pickled value to `%s`", filename)
         disk_utils.write(full_path, io.BytesIO(result), "xb")
         return len(result), CacheMode.PICKLE, str(filename), None
@@ -186,11 +188,7 @@ class Disk(DiskProtocol):
     @context
     @override
     async def astore(  # noqa: PLR0911
-        self,
-        value: Any,
-        *,
-        key: Any = UNKNOWN,
-        filepath: tuple[Path, Path] | None = None,
+        self, value: Any, *, key: Any = UNKNOWN, filepath: Path | None = None
     ) -> tuple[int, CacheMode, str | None, bytes | None]:
         if value is None:
             logger.debug("Storing null value")
@@ -201,7 +199,8 @@ class Disk(DiskProtocol):
                 logger.debug("Storing raw value(string)")
                 return 0, CacheMode.TEXT, None, value.encode()
 
-            filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Storing text value to `%s`", filename)
             await disk_utils.async_write(full_path, io.StringIO(value), "x", "UTF-8")
             size = full_path.stat().st_size
@@ -213,7 +212,8 @@ class Disk(DiskProtocol):
                 logger.debug("Storing raw value(bytes)")
                 return 0, CacheMode.BINARY, None, value
 
-            filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+            filename = full_path.relative_to(self.directory)
             logger.debug("Storing binary value to `%s`", filename)
             await disk_utils.async_write(full_path, io.BytesIO(value), "xb")
             size = full_path.stat().st_size
@@ -230,7 +230,8 @@ class Disk(DiskProtocol):
             self.min_file_size,
         )
 
-        filename, full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+        full_path = disk_utils.ensure_filepath(self, key, value, filepath)
+        filename = full_path.relative_to(self.directory)
         logger.debug("Storing pickled value to `%s`", filename)
         await disk_utils.async_write(full_path, io.BytesIO(result), "xb")
         return len(result), CacheMode.PICKLE, str(filename), None
@@ -248,21 +249,21 @@ class Disk(DiskProtocol):
                 logger.debug("Fetching text value")
                 return str(value, "utf-8")
             logger.debug("Fetching text value from `%s`", filename)
-            with (self._directory / filename).open("r", encoding="UTF-8") as reader:
+            with (self.directory / filename).open("r", encoding="UTF-8") as reader:
                 return reader.read()
         if mode == CacheMode.BINARY:
             if filename is None:
                 logger.debug("Fetching binary value")
                 return value
             logger.debug("Fetching binary value from `%s`", filename)
-            with (self._directory / filename).open("rb") as reader:
+            with (self.directory / filename).open("rb") as reader:
                 return reader.read()
         if mode == CacheMode.PICKLE:
             if filename is None:
                 logger.debug("Fetching pickled value")
                 return cloudpickle.loads(value)
             logger.debug("Fetching pickled value from `%s`", filename)
-            with (self._directory / filename).open("rb") as reader:
+            with (self.directory / filename).open("rb") as reader:
                 return cloudpickle.load(reader)
 
         error_msg = f"Incorrect mode `{mode}`"
@@ -283,7 +284,7 @@ class Disk(DiskProtocol):
                 logger.debug("Fetching text value")
                 return str(value, "utf-8")
             logger.debug("Fetching text value from `%s`", filename)
-            async with await anyio.Path(self._directory / filename).open(
+            async with await anyio.Path(self.directory / filename).open(
                 "r", encoding="UTF-8"
             ) as reader:
                 return await reader.read()
@@ -292,18 +293,14 @@ class Disk(DiskProtocol):
                 logger.debug("Fetching binary value")
                 return value
             logger.debug("Fetching binary value from `%s`", filename)
-            async with await anyio.Path(self._directory / filename).open(
-                "rb"
-            ) as reader:
+            async with await anyio.Path(self.directory / filename).open("rb") as reader:
                 return await reader.read()
         if mode == CacheMode.PICKLE:
             if filename is None:
                 logger.debug("Fetching pickled value")
                 return cloudpickle.loads(value)
             logger.debug("Fetching pickled value from `%s`", filename)
-            async with await anyio.Path(self._directory / filename).open(
-                "rb"
-            ) as reader:
+            async with await anyio.Path(self.directory / filename).open("rb") as reader:
                 return cloudpickle.loads(await reader.read())
 
         error_msg = f"Incorrect mode `{mode}`"
@@ -312,7 +309,7 @@ class Disk(DiskProtocol):
     @context
     @override
     def remove(self, file_path: str | PathLike[str]) -> None:
-        full_path = self._directory / file_path
+        full_path = self.directory / file_path
         full_dir = full_path.parent
 
         # Suppress OSError that may occur if two caches attempt to delete the
@@ -335,7 +332,7 @@ class Disk(DiskProtocol):
     async def aremove(self, file_path: str | PathLike[str]) -> None:
         import anyio
 
-        full_path = anyio.Path(self._directory / file_path)
+        full_path = anyio.Path(self.directory / file_path)
         full_dir = full_path.parent
 
         # Suppress OSError that may occur if two caches attempt to delete the
@@ -355,17 +352,16 @@ class Disk(DiskProtocol):
 
     @context
     @override
-    def filename(self, key: Any = UNKNOWN, value: Any = UNKNOWN) -> tuple[Path, Path]:
+    def filename(self, key: Any = UNKNOWN, value: Any = UNKNOWN) -> Path:
         hex_name = codecs.encode(os.urandom(16), "hex").decode("utf-8")
         filename = Path(hex_name[:2]) / hex_name[2:4] / f"{hex_name[4:]}.val"
-        full_path = self._directory / filename
-        return filename, full_path
+        return self.directory / filename
 
     @override
     def model_dump(self) -> tuple[str, dict[str, Any]]:
         cls = type(self)
         name = f"{cls.__module__}.{cls.__qualname__}"
         return name, {
-            "directory": str(self._directory),
+            "directory": str(self.directory),
             "min_file_size": self.min_file_size,
         }
