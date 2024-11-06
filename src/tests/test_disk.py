@@ -126,3 +126,39 @@ class TestDisk:
         fetch = await self.disk.afetch(mode=mode, filename=filename, value=db_value)
 
         assert fetch == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param((None,) * 2**20, id="tuple"),
+            pytest.param("hello" * 2**20, id="long_str"),
+            pytest.param(b"world" * 2**20, id="long_bytes"),
+        ],
+    )
+    @pytest.mark.parametrize("key", [True, False])
+    @pytest.mark.parametrize("filepath", [True, False])
+    async def test_remove(self, value, key, filepath):
+        params = {}
+        if key:
+            params["key"] = value
+        if filepath:
+            params["filepath"] = self.origin_disk.prepare(value, **params)
+        _, _, filename, _ = await self.disk.astore(value, **params)
+
+        assert filename
+        file = self.origin_disk.directory / filename
+        assert file.exists()
+
+        await self.disk.aremove(filename)
+        assert not file.exists()
+
+    @value_params
+    @pytest.mark.parametrize("key", [True, False])
+    def test_filename(self, value, key):
+        params = {}
+        if key:
+            params["key"] = value
+
+        filename = self.origin_disk.filename(value=value, **params)
+        assert isinstance(filename, Path)
+        assert filename.is_relative_to(self.origin_disk.directory)
