@@ -27,7 +27,34 @@ _SEMAPHORE_VALUE_ADAPTER = TypeAdapter(int)
 
 
 class SyncSemaphore(SyncSemaphoreProtocol):
-    """Semaphore implementation using spin-lock algorithm."""
+    """Synchronous semaphore implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Args:
+        cache: Cache to use for semaphore.
+        key: Key for semaphore.
+        value: Value for semaphore.
+        timeout: Timeout for semaphore.
+        expire: Expiration time for semaphore.
+        tags: Tags for semaphore.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        def main() -> None:
+            cache = typed_diskcache.Cache()
+            semaphore = typed_diskcache.SyncSemaphore(cache, "some-key", value=2)
+            semaphore.acquire()
+            semaphore.acquire()
+            semaphore.release()
+            with semaphore:
+                pass
+        ```
+    """
 
     __slots__ = ("_cache", "_key", "_value", "_timeout", "_expire", "_tags")
 
@@ -141,7 +168,36 @@ class SyncSemaphore(SyncSemaphoreProtocol):
 
 
 class AsyncSemaphore(AsyncSemaphoreProtocol):
-    """Asynchronous semaphore implementation using spin-lock algorithm."""
+    """Asynchronous semaphore implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Asynchronous version of [`SyncSemaphore`][typed_diskcache.SyncSemaphore].
+
+    Args:
+        cache: Cache to use for semaphore.
+        key: Key for semaphore.
+        value: Value for semaphore.
+        timeout: Timeout for semaphore.
+        expire: Expiration time for semaphore.
+        tags: Tags for semaphore.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        async def main() -> None:
+                cache = typed_diskcache.Cache()
+                semaphore = typed_diskcache.AsyncSemaphore(cache, "some-key", value=2)
+                await semaphore.acquire()
+                await semaphore.acquire()
+                await semaphore.release()
+                async with semaphore:
+                    pass
+        ```
+    """
 
     __slots__ = ("_cache", "_key", "_value", "_expire", "_tags")
 

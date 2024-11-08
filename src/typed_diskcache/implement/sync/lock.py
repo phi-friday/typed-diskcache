@@ -29,7 +29,32 @@ _LOCK_VALUE_ADAPTER = TypeAdapter(tuple[str, int])
 
 
 class SyncLock(SyncLockProtocol):
-    """Lock implementation using spin-lock algorithm."""
+    """Lock implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Args:
+        cache: Cache to use for lock.
+        key: Key for lock.
+        timeout: Timeout for lock.
+        expire: Expiration time for lock.
+        tags: Tags for lock.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        def main() -> None:
+            cache = typed_diskcache.Cache()
+            lock = typed_diskcache.SyncLock(cache, "some-key")
+            lock.acquire()
+            lock.release()
+            with lock:
+                pass
+        ```
+    """
 
     __slots__ = ("_cache", "_key", "_timeout", "_expire", "_tags")
 
@@ -109,7 +134,32 @@ class SyncLock(SyncLockProtocol):
 
 
 class SyncRLock(SyncLock):
-    """Re-entrant lock implementation using spin-lock algorithm."""
+    """Re-entrant lock implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Args:
+        cache: Cache to use for lock.
+        key: Key for lock.
+        timeout: Timeout for lock.
+        expire: Expiration time for lock.
+        tags: Tags for lock.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        def main() -> None:
+            cache = typed_diskcache.Cache()
+            lock = typed_diskcache.SyncLock(cache, "some-key")
+            lock.acquire()
+            lock.release()
+            with lock:
+                pass
+        ```
+    """
 
     @context
     @override
@@ -181,7 +231,34 @@ class SyncRLock(SyncLock):
 
 
 class AsyncLock(AsyncLockProtocol):
-    """Lock implementation using spin-lock algorithm."""
+    """Lock implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Asynchronous version of [`SyncLock`][typed_diskcache.SyncLock].
+
+    Args:
+        cache: Cache to use for lock.
+        key: Key for lock.
+        timeout: Timeout for lock.
+        expire: Expiration time for lock.
+        tags: Tags for lock.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        async def main() -> None:
+            cache = typed_diskcache.Cache()
+            lock = typed_diskcache.AsyncLock(cache, "some-key")
+            await lock.acquire()
+            await lock.release()
+            async with lock:
+                pass
+        ```
+    """
 
     __slots__ = ("_cache", "_key", "_timeout", "_expire", "_tags")
 
@@ -262,7 +339,34 @@ class AsyncLock(AsyncLockProtocol):
 
 
 class AsyncRLock(AsyncLock):
-    """Re-entrant lock implementation using spin-lock algorithm."""
+    """Re-entrant lock implementation using spin-lock algorithm.
+
+    Assumes the key will not be evicted. Set the eviction policy to 'none' on
+    the cache to guarantee the key is not evicted.
+
+    Asynchronous version of [`SyncRLock`][typed_diskcache.SyncRLock].
+
+    Args:
+        cache: Cache to use for lock.
+        key: Key for lock.
+        timeout: Timeout for lock.
+        expire: Expiration time for lock.
+        tags: Tags for lock.
+
+    Examples:
+        ```python
+        import typed_diskcache
+
+
+        async def main() -> None:
+            cache = typed_diskcache.Cache()
+            lock = typed_diskcache.AsyncLock(cache, "some-key")
+            await lock.acquire()
+            await lock.release()
+            async with lock:
+                pass
+        ```
+    """
 
     @context
     @override
