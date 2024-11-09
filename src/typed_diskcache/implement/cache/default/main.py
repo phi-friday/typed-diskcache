@@ -108,7 +108,7 @@ class Cache(CacheProtocol):
     @context("Cache.length")
     @override
     def __len__(self) -> int:
-        with self.conn.session() as session:
+        with self.conn.session(stacklevel=4) as session:
             return session.scalars(
                 sa.select(Metadata.value).where(Metadata.key == MetadataKey.COUNT)
             ).one()
@@ -128,7 +128,7 @@ class Cache(CacheProtocol):
     @override
     def __contains__(self, key: Any) -> bool:
         db_key, raw = self.disk.put(key)
-        with self.conn.session() as session:
+        with self.conn.session(stacklevel=4) as session:
             row = session.scalars(
                 sa.select(CacheTable.id).where(
                     CacheTable.key == db_key,
@@ -241,7 +241,7 @@ class Cache(CacheProtocol):
             and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
-            with self.conn.session() as session:
+            with self.conn.session(stacklevel=4) as session:
                 row = session.scalars(
                     select_stmt, {"expire_time": time.time()}
                 ).one_or_none()
@@ -328,7 +328,7 @@ class Cache(CacheProtocol):
             and self.settings.eviction_policy == EvictionPolicy.NONE
         ):
             logger.debug("Cache statistics disabled or eviction policy is NONE")
-            async with self.conn.asession() as session:
+            async with self.conn.asession(stacklevel=4) as session:
                 row_fetch = await session.scalars(
                     select_stmt, {"expire_time": time.time()}
                 )
@@ -685,7 +685,7 @@ class Cache(CacheProtocol):
     @context
     @override
     def volume(self) -> int:
-        with self.conn.session() as session:
+        with self.conn.session(stacklevel=4) as session:
             page_count: int = session.execute(
                 sa.text("PRAGMA page_count;")
             ).scalar_one()
@@ -698,7 +698,7 @@ class Cache(CacheProtocol):
     @context
     @override
     async def avolume(self) -> int:
-        async with self.conn.asession() as session:
+        async with self.conn.asession(stacklevel=4) as session:
             page_count_fetch = await session.execute(sa.text("PRAGMA page_count;"))
             page_count: int = page_count_fetch.scalar_one()
             size_fetch = await session.scalars(
@@ -1068,7 +1068,7 @@ class Cache(CacheProtocol):
         lower_bound = 0
         tags_count = len(tags)
         while True:
-            with self.conn.session() as session:
+            with self.conn.session(stacklevel=4) as session:
                 rows = session.execute(
                     stmt,
                     {
@@ -1105,7 +1105,7 @@ class Cache(CacheProtocol):
         lower_bound = 0
         tags_count = len(tags)
         while True:
-            async with self.conn.asession() as session:
+            async with self.conn.asession(stacklevel=4) as session:
                 rows_fetch = await session.execute(
                     stmt,
                     {
@@ -1941,7 +1941,7 @@ class Cache(CacheProtocol):
     @override
     def iterkeys(self, *, reverse: bool = False) -> Generator[Any, None, None]:
         select_stmt, iter_stmt = default_utils.prepare_iterkeys_stmt(reverse=reverse)
-        with self.conn.session() as session:
+        with self.conn.session(stacklevel=4) as session:
             row = session.execute(select_stmt).one_or_none()
 
             if not row:
@@ -1965,7 +1965,7 @@ class Cache(CacheProtocol):
     @override
     async def aiterkeys(self, *, reverse: bool = False) -> AsyncGenerator[Any, None]:
         select_stmt, iter_stmt = default_utils.prepare_iterkeys_stmt(reverse=reverse)
-        async with self.conn.asession() as session:
+        async with self.conn.asession(stacklevel=4) as session:
             row_fetch = await session.execute(select_stmt)
             row = row_fetch.one_or_none()
 

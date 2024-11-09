@@ -16,6 +16,7 @@ from typed_diskcache.core.context import enter_session
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
+from typed_diskcache.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Mapping
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
 
 
 __all__ = ["Connection"]
+
+logger = get_logger()
 
 
 class Connection:
@@ -112,40 +115,72 @@ class Connection:
         return db_connect.set_listeners(engine, self._settings.sqlite_settings)
 
     @contextmanager
-    def _connect(self) -> Generator[SAConnection, None, None]:
+    def _connect(self, *, stacklevel: int = 1) -> Generator[SAConnection, None, None]:
         with self._sync_engine.connect() as connection:
+            logger.debug(
+                "Creating connection: `%d`", id(connection), stacklevel=stacklevel
+            )
             yield connection
+            logger.debug(
+                "Closing connection: `%d`", id(connection), stacklevel=stacklevel
+            )
 
     @contextmanager
-    def session(self) -> Generator[Session, None, None]:
+    def session(self, *, stacklevel: int = 1) -> Generator[Session, None, None]:
         """Connect to the database."""
         session = self._context.get()
         if session is not None:
+            logger.debug("Reusing session: `%d`", id(session), stacklevel=stacklevel)
             yield session
             return
 
-        with self._connect() as connection:
+        with self._connect(stacklevel=stacklevel + 2) as connection:
             with Session(connection, autoflush=False) as session:
+                logger.debug(
+                    "Creating session: `%d`", id(session), stacklevel=stacklevel
+                )
                 yield session
+                logger.debug(
+                    "Closing session: `%d`", id(session), stacklevel=stacklevel
+                )
 
     @asynccontextmanager
-    async def _aconnect(self) -> AsyncGenerator[AsyncConnection, None]:
+    async def _aconnect(
+        self, *, stacklevel: int = 1
+    ) -> AsyncGenerator[AsyncConnection, None]:
         """Connect to the database."""
         async with self._async_engine.connect() as connection:
+            logger.debug(
+                "Creating async connection: `%d`", id(connection), stacklevel=stacklevel
+            )
             yield connection
+            logger.debug(
+                "Closing async connection: `%d`", id(connection), stacklevel=stacklevel
+            )
 
     @asynccontextmanager
-    async def asession(self) -> AsyncGenerator[AsyncSession, None]:
+    async def asession(
+        self, *, stacklevel: int = 1
+    ) -> AsyncGenerator[AsyncSession, None]:
         """Connect to the database."""
         session = self._acontext.get()
         if session is not None:
+            logger.debug(
+                "Reusing async session: `%d`", id(session), stacklevel=stacklevel
+            )
             await anyio.lowlevel.checkpoint()
             yield session
             return
 
-        async with self._aconnect() as connection:
+        async with self._aconnect(stacklevel=stacklevel + 2) as connection:
             async with AsyncSession(connection, autoflush=False) as session:
+                logger.debug(
+                    "Creating async session: `%d`", id(session), stacklevel=stacklevel
+                )
                 yield session
+                logger.debug(
+                    "Closing async session: `%d`", id(session), stacklevel=stacklevel
+                )
 
     def close(self) -> None:
         """Close the connection."""
@@ -194,6 +229,11 @@ class Connection:
         """
         context_var = (
             self._acontext if isinstance(session, AsyncSession) else self._context
+        )
+        logger.debug(
+            "Entering session context: `%s`, session: `%d`",
+            context_var.name,
+            id(session),
         )
         with enter_session(session, context_var) as context:  # pyright: ignore[reportArgumentType]
             yield context

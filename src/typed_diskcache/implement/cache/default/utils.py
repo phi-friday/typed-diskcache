@@ -152,16 +152,17 @@ def prepare_cull_stmt(
     return filenames_select_stmt, filenames_delete_stmt, select_stmt
 
 
-def transact_process(
+def transact_process(  # noqa: PLR0913
     stack: ExitStack,
     conn: Connection,
     disk: DiskProtocol,
     *,
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
+    stacklevel: int = 3,
 ) -> Session | None:
     try:
-        session = stack.enter_context(conn.session())
+        session = stack.enter_context(conn.session(stacklevel=stacklevel))
         session = stack.enter_context(database_transact(session))
     except OperationalError as exc:
         stack.close()
@@ -174,16 +175,17 @@ def transact_process(
         return session
 
 
-async def async_transact_process(
+async def async_transact_process(  # noqa: PLR0913
     stack: AsyncExitStack,
     conn: Connection,
     disk: DiskProtocol,
     *,
     retry: bool = False,
     filename: str | PathLike[str] | None = None,
+    stacklevel: int = 3,
 ) -> AsyncSession | None:
     try:
-        session = await stack.enter_async_context(conn.asession())
+        session = await stack.enter_async_context(conn.asession(stacklevel=stacklevel))
         session = await stack.enter_async_context(database_transact(session))
     except OperationalError as exc:
         await stack.aclose()
@@ -218,7 +220,7 @@ def iter_disk(
     )
 
     while True:
-        with conn.session() as session:
+        with conn.session(stacklevel=4) as session:
             rows = session.execute(
                 stmt,
                 {"left_bound": rowid, "right_bound": bound}
@@ -254,7 +256,7 @@ async def aiter_disk(
     )
 
     while True:
-        async with conn.asession() as session:
+        async with conn.asession(stacklevel=4) as session:
             rows_fetch = await session.execute(
                 stmt, {"left_bound": rowid, "right_bound": bound}
             )
@@ -422,7 +424,12 @@ def transact(
         while session is None:
             stack.close()
             session = transact_process(
-                stack, conn, disk, retry=retry, filename=filename
+                stack,
+                conn,
+                disk,
+                retry=retry,
+                filename=filename,
+                stacklevel=stacklevel + 4,
             )
 
         logger.debug("Enter transaction `%s`", filename, stacklevel=stacklevel)
@@ -461,12 +468,20 @@ async def async_transact(
         while session is None:
             await stack.aclose()
             session = await async_transact_process(
-                stack, conn, disk, retry=retry, filename=filename
+                stack,
+                conn,
+                disk,
+                retry=retry,
+                filename=filename,
+                stacklevel=stacklevel + 4,
             )
 
         logger.debug("Enter async transaction `%s`", filename, stacklevel=stacklevel)
         stack.callback(
-            logger.debug, "Exit async transaction `%s`", filename, stacklevel=stacklevel
+            logger.debug,
+            "Exit async transaction `%s`",
+            filename,
+            stacklevel=stacklevel + 2,
         )
         try:
             stack.enter_context(receive)
@@ -599,12 +614,12 @@ def prepare_filter_stmt(
 
 
 def find_max_id(conn: Connection) -> int | None:
-    with conn.session() as session:
+    with conn.session(stacklevel=4) as session:
         return session.scalar(sa.select(sa.func.max(CacheTable.id)))
 
 
 async def async_find_max_id(conn: Connection) -> int | None:
-    async with conn.asession() as session:
+    async with conn.asession(stacklevel=4) as session:
         return await session.scalar(sa.select(sa.func.max(CacheTable.id)))
 
 
@@ -976,7 +991,7 @@ def prepare_iterkeys_stmt(
 
 
 async def acheck_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) -> None:
-    async with conn.asession() as session:
+    async with conn.asession(stacklevel=4) as session:
         integrity_fetch = await session.execute(sa.text("PRAGMA integrity_check;"))
         integrity = integrity_fetch.scalars().all()
 
@@ -1168,7 +1183,7 @@ async def acheck_metadata_size(
 
 
 def check_integrity(*, conn: Connection, fix: bool, stacklevel: int = 2) -> None:
-    with conn.session() as session:
+    with conn.session(stacklevel=4) as session:
         integrity = session.execute(sa.text("PRAGMA integrity_check;")).scalars().all()
 
         if len(integrity) != 1 or integrity[0] != "ok":

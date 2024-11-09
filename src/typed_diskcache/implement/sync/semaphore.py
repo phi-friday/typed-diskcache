@@ -106,10 +106,13 @@ class SyncSemaphore(SyncSemaphoreProtocol):
         start = time.monotonic()
         timeout = 0
         with ExitStack() as stack:
+            session = stack.enter_context(self._cache.conn.session())
+            sub_stack = stack.enter_context(ExitStack())
             while timeout < self.timeout:
-                session = stack.enter_context(self._cache.conn.session())
-                stack.enter_context(transact(session))
-                context = stack.enter_context(self._cache.conn.enter_session(session))
+                sub_stack.enter_context(transact(session))
+                context = sub_stack.enter_context(
+                    self._cache.conn.enter_session(session)
+                )
                 container = context.run(self._cache.get, self.key, default=self._value)
                 container_value = validate_semaphore_value(container.value)
                 if container_value > 0:
@@ -121,7 +124,7 @@ class SyncSemaphore(SyncSemaphoreProtocol):
                         tags=self.tags,
                     )
                     return
-                stack.close()
+                sub_stack.close()
                 time.sleep(SPIN_LOCK_SLEEP)
                 timeout = time.monotonic() - start
 
@@ -251,11 +254,9 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         try:
             async with AsyncExitStack() as stack:
                 stack.enter_context(anyio.fail_after(self.timeout))
+                session = await stack.enter_async_context(self._cache.conn.asession())
                 sub_stack = await stack.enter_async_context(AsyncExitStack())
                 while True:
-                    session = await sub_stack.enter_async_context(
-                        self._cache.conn.asession()
-                    )
                     await sub_stack.enter_async_context(transact(session))
                     context = stack.enter_context(
                         self._cache.conn.enter_session(session)

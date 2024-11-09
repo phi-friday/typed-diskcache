@@ -94,7 +94,6 @@ async def test_async_lock(cache):
     assert state["num"] == 2
 
 
-@pytest.mark.only
 async def test_async_rlock(cache):
     state = {"num": 0}
     rlock = typed_diskcache.AsyncRLock(cache, "demo")

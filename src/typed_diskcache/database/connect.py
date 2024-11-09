@@ -9,7 +9,6 @@ from contextlib import (
 )
 from typing import TYPE_CHECKING, Any, Callable, Protocol, overload, runtime_checkable
 
-import anyio
 import sqlalchemy as sa
 from sqlalchemy.dialects.sqlite import dialect as sqlite_dialect
 from sqlalchemy.engine import Connection, Engine, create_engine
@@ -53,7 +52,6 @@ SessionT = TypeVar("SessionT", bound="Session | AsyncSession", infer_variance=Tr
 
 _TIMEOUT = 10
 _TIMEOUT_MS = _TIMEOUT * 1000
-_LOCK = anyio.Lock()
 
 logger = get_logger()
 
@@ -243,6 +241,7 @@ def ensure_sqlite_async_engine(
 def sync_transact(conn: SyncConnT) -> Generator[SyncConnT, None, None]:
     is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
     if is_begin is False:
+        logger.debug("enter transaction, session: `%d`", id(conn))
         conn.execute(sa.text("BEGIN IMMEDIATE;"))
         conn.info[CONNECTION_BEGIN_INFO_KEY] = True
 
@@ -252,17 +251,18 @@ def sync_transact(conn: SyncConnT) -> Generator[SyncConnT, None, None]:
         conn.rollback()
         raise
     finally:
+        logger.debug("exit transaction, session: `%d`", id(conn))
         with suppress(ResourceClosedError):
             conn.info[CONNECTION_BEGIN_INFO_KEY] = False
 
 
 @asynccontextmanager
 async def async_transact(conn: AsyncConnT) -> AsyncGenerator[AsyncConnT, None]:
-    async with _LOCK:
-        is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
-        if is_begin is False:
-            await conn.execute(sa.text("BEGIN IMMEDIATE;"))
-            conn.info[CONNECTION_BEGIN_INFO_KEY] = True
+    is_begin = conn.info.get(CONNECTION_BEGIN_INFO_KEY, False)
+    if is_begin is False:
+        logger.debug("enter transaction, session: `%d`", id(conn))
+        await conn.execute(sa.text("BEGIN IMMEDIATE;"))
+        conn.info[CONNECTION_BEGIN_INFO_KEY] = True
 
     try:
         yield conn
@@ -270,6 +270,7 @@ async def async_transact(conn: AsyncConnT) -> AsyncGenerator[AsyncConnT, None]:
         await conn.rollback()
         raise
     finally:
+        logger.debug("exit transaction, session: `%d`", id(conn))
         with suppress(ResourceClosedError):
             conn.info[CONNECTION_BEGIN_INFO_KEY] = False
 

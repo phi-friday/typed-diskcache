@@ -165,16 +165,19 @@ class SyncRLock(SyncLock):
     @override
     def acquire(self) -> None:
         pid = os.getpid()
-        tid = threading.get_ident()
+        tid = threading.get_native_id()
         pid_tid = f"{pid}-{tid}"
         start = time.monotonic()
         timeout = 0
 
         with ExitStack() as stack:
+            session = stack.enter_context(self._cache.conn.session(stacklevel=4))
+            sub_stack = stack.enter_context(ExitStack())
             while timeout < self.timeout:
-                session = stack.enter_context(self._cache.conn.session())
-                stack.enter_context(transact(session))
-                context = stack.enter_context(self._cache.conn.enter_session(session))
+                sub_stack.enter_context(transact(session))
+                context = sub_stack.enter_context(
+                    self._cache.conn.enter_session(session)
+                )
                 container = context.run(
                     self._cache.get, self.key, default=("default", 0)
                 )
@@ -194,7 +197,12 @@ class SyncRLock(SyncLock):
                         tags=self.tags,
                     )
                     return
-                stack.close()
+                logger.debug(
+                    "Invalid lock: expected: `%s`, value: `%s`",
+                    pid_tid,
+                    container_value,
+                )
+                sub_stack.close()
                 time.sleep(SPIN_LOCK_SLEEP)
                 timeout = time.monotonic() - start
 
@@ -204,11 +212,12 @@ class SyncRLock(SyncLock):
     @override
     def release(self) -> None:
         pid = os.getpid()
-        tid = threading.get_ident()
+        tid = threading.get_native_id()
         pid_tid = f"{pid}-{tid}"
 
         with ExitStack() as stack:
-            session = stack.enter_context(self._cache.conn.session())
+            logger.debug("releasing lock: %s", pid_tid)
+            session = stack.enter_context(self._cache.conn.session(stacklevel=4))
             stack.enter_context(transact(session))
             context = stack.enter_context(self._cache.conn.enter_session(session))
             container = context.run(self._cache.get, self.key, default=("default", 0))
@@ -378,17 +387,17 @@ class AsyncRLock(AsyncLock):
         import anyio
 
         pid = os.getpid()
-        tid = threading.get_ident()
+        tid = threading.get_native_id()
         pid_tid = f"{pid}-{tid}"
 
         try:
             async with AsyncExitStack() as stack:
                 stack.enter_context(anyio.fail_after(self.timeout))
+                session = await stack.enter_async_context(
+                    self._cache.conn.asession(stacklevel=4)
+                )
                 sub_stack = await stack.enter_async_context(AsyncExitStack())
                 while True:
-                    session = await sub_stack.enter_async_context(
-                        self._cache.conn.asession()
-                    )
                     await sub_stack.enter_async_context(transact(session))
                     context = stack.enter_context(
                         self._cache.conn.enter_session(session)
@@ -412,6 +421,11 @@ class AsyncRLock(AsyncLock):
                             tags=self.tags,
                         )
                         return
+                    logger.debug(
+                        "Invalid lock: expected: `%s`, value: `%s`",
+                        pid_tid,
+                        container_value,
+                    )
                     await sub_stack.aclose()
                     await anyio.sleep(SPIN_LOCK_SLEEP)
         except TimeoutError as exc:
@@ -422,11 +436,14 @@ class AsyncRLock(AsyncLock):
     async def release(self) -> None:
         """Release lock by decrementing count."""
         pid = os.getpid()
-        tid = threading.get_ident()
+        tid = threading.get_native_id()
         pid_tid = f"{pid}-{tid}"
 
         async with AsyncExitStack() as stack:
-            session = await stack.enter_async_context(self._cache.conn.asession())
+            logger.debug("releasing lock: %s", pid_tid)
+            session = await stack.enter_async_context(
+                self._cache.conn.asession(stacklevel=4)
+            )
             await stack.enter_async_context(transact(session))
             context = stack.enter_context(self._cache.conn.enter_session(session))
             container = await self._cache.aget(self.key, default=("default", 0))
