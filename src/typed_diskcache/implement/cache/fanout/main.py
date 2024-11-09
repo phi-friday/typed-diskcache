@@ -10,7 +10,6 @@ from os.path import expandvars
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn, overload
 
-import anyio
 from sqlalchemy.exc import OperationalError
 from typing_extensions import TypeVar, Unpack, override
 
@@ -30,6 +29,7 @@ from typed_diskcache.implement.cache import utils as cache_utils
 from typed_diskcache.implement.cache.default import Cache as Shard
 from typed_diskcache.implement.cache.fanout import utils as fanout_utils
 from typed_diskcache.interface.cache import CacheProtocol
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -321,6 +321,9 @@ class FanoutCache(CacheProtocol):
 
     @override
     async def astats(self, *, enable: bool = True, reset: bool = False) -> Stats:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
+        import anyio
+
         hits, misses = 0, 0
 
         async def update_stats(shard: Shard) -> None:
@@ -344,6 +347,9 @@ class FanoutCache(CacheProtocol):
 
     @override
     async def aclose(self) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
+        import anyio
+
         await self.conn.aclose()
         async with anyio.create_task_group() as task_group:
             for shard in self._shards:
@@ -697,6 +703,9 @@ class FanoutCache(CacheProtocol):
         settings: Settings | SettingsKwargs | None = None,
         **kwargs: Unpack[SettingsKwargs],
     ) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
+        import anyio
+
         settings = cache_utils.combine_settings(settings, kwargs)
         async with anyio.create_task_group() as task_group:
             for shard in self._shards:

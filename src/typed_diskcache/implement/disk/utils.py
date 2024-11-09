@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from typing_extensions import TypeAlias
 
+from typed_diskcache.utils.dependency import validate_installed
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -88,6 +90,7 @@ async def async_write(
     mode: OpenTextModeWriting | OpenBinaryModeWriting,
     encoding: str | None = None,
 ) -> int | None:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     full_path = anyio.Path(full_path)

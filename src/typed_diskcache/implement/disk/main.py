@@ -18,6 +18,7 @@ from typed_diskcache.core.types import CacheMode
 from typed_diskcache.implement.disk import utils as disk_utils
 from typed_diskcache.interface.disk import DiskProtocol
 from typed_diskcache.log import get_logger
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -274,6 +275,7 @@ class Disk(DiskProtocol):
     async def afetch(  # noqa: PLR0911
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
         import anyio
 
         if mode == CacheMode.NONE:
@@ -330,6 +332,7 @@ class Disk(DiskProtocol):
     @context
     @override
     async def aremove(self, file_path: str | PathLike[str]) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
         import anyio
 
         full_path = anyio.Path(self.directory / file_path)

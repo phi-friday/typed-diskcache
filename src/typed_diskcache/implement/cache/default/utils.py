@@ -35,6 +35,7 @@ from typed_diskcache.database.model import Metadata
 from typed_diskcache.database.model import Settings as SettingsTable
 from typed_diskcache.database.model import Tag as TagTable
 from typed_diskcache.log import get_logger
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -272,6 +273,7 @@ async def aiter_disk(
 def extend_queue(
     stream: MemoryObjectSendStream[_T],
 ) -> Callable[[Iterable[_T]], Awaitable[Any]]:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     async def extend(items: Iterable[_T]) -> None:
@@ -458,6 +460,7 @@ async def async_transact(
     filename: str | PathLike[str] | None = None,
     stacklevel: int = 3,
 ) -> AsyncGenerator[tuple[AsyncSession, AsyncCleanupFunc], None]:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     send, receive = anyio.create_memory_object_stream["str | PathLike[str] | None"](
@@ -1056,6 +1059,7 @@ async def acheck_file_exists(  # noqa: PLR0913
     filenames: set[AnyioPath],
     stacklevel: int = 3,
 ) -> None:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     full_path: anyio.Path = anyio.Path(directory) / row.filepath
@@ -1092,6 +1096,7 @@ async def acheck_unknown_file(
     filenames: set[AnyioPath],
     stacklevel: int = 3,
 ) -> None:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     paths = {anyio.Path(dirpath) / file for file in files}
@@ -1118,6 +1123,7 @@ async def acheck_empty_dir(
     fix: bool,
     stacklevel: int = 3,
 ) -> None:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     if not (dirs or files):

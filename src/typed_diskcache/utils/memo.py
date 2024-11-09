@@ -17,6 +17,7 @@ from typing_extensions import ParamSpec, TypeVar, override
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
 from typed_diskcache.interface.cache import CacheProtocol
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from typed_diskcache.interface.cache import CacheProtocol
@@ -595,6 +596,7 @@ def async_thread_recompute(
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> None:
+    validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
     new_func = partial(

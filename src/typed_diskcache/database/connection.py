@@ -6,7 +6,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import anyio.lowlevel
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
 from sqlalchemy.orm import Session
@@ -17,6 +16,7 @@ from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.database import connect as db_connect
 from typed_diskcache.database.model import Cache
 from typed_diskcache.log import get_logger
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Mapping
@@ -163,6 +163,9 @@ class Connection:
         self, *, stacklevel: int = 1
     ) -> AsyncGenerator[AsyncSession, None]:
         """Connect to the database."""
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
+        import anyio.lowlevel
+
         session = self._acontext.get()
         if session is not None:
             logger.debug(

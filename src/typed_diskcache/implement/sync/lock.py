@@ -15,6 +15,7 @@ from typed_diskcache.core.context import context
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncLockProtocol, SyncLockProtocol
 from typed_diskcache.log import get_logger
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -318,6 +319,7 @@ class AsyncLock(AsyncLockProtocol):
     @context
     @override
     async def acquire(self) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
         import anyio
 
         try:
@@ -384,6 +386,7 @@ class AsyncRLock(AsyncLock):
     @context
     @override
     async def acquire(self) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
         import anyio
 
         pid = os.getpid()

@@ -13,6 +13,7 @@ from typed_diskcache.core.context import context
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncSemaphoreProtocol, SyncSemaphoreProtocol
 from typed_diskcache.log import get_logger
+from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -249,6 +250,7 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
     @context
     @override
     async def acquire(self) -> None:
+        validate_installed("anyio", "Consider installing extra `asyncio`.")
         import anyio
 
         try:
