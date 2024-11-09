@@ -108,7 +108,7 @@ class SyncLock(SyncLockProtocol):
                 self.key, None, expire=self.expire, tags=self.tags, retry=True
             )
             if added:
-                break
+                return
             time.sleep(SPIN_LOCK_SLEEP)
             timeout = time.monotonic() - start
 
@@ -179,7 +179,11 @@ class SyncRLock(SyncLock):
                     self._cache.get, self.key, default=("default", 0)
                 )
                 container_value = validate_lock_value(container.value)
-                if container.default or pid_tid == container_value[0]:
+                if (
+                    container.default
+                    or pid_tid == container_value[0]
+                    or container_value[1] <= 0
+                ):
                     value = 1 if container.default else container_value[1] + 1
                     logger.debug("acquired lock: %s, value: %d", pid_tid, value)
                     context.run(
@@ -393,7 +397,11 @@ class AsyncRLock(AsyncLock):
                         self._cache.aget, self.key, default=("default", 0)
                     )
                     container_value = validate_lock_value(container.value)
-                    if container.default or pid_tid == container_value[0]:
+                    if (
+                        container.default
+                        or pid_tid == container_value[0]
+                        or container_value[1] <= 0
+                    ):
                         value = 1 if container.default else container_value[1] + 1
                         logger.debug("acquired lock: %s, value: %d", pid_tid, value)
                         await context.run(
