@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator as op
 import shutil
+import warnings
 from collections.abc import Callable, Iterable, Iterator, MutableSequence, Sequence
 from contextlib import suppress
 from functools import partial
@@ -79,7 +80,11 @@ class Deque(MutableSequence[_T], Generic[_T]):
     ) -> None:
         eviction_policy = kwargs.pop("eviction_policy", EvictionPolicy.NONE)
         if eviction_policy != EvictionPolicy.NONE:
-            logger.warning("Deque eviction policy must be none")
+            warnings.warn(
+                "Deque eviction policy must be none",
+                te.TypedDiskcacheWarning,
+                stacklevel=2,
+            )
 
         kwargs["eviction_policy"] = EvictionPolicy.NONE
         self._cache = Cache(directory=directory, **kwargs)
@@ -116,7 +121,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
                 deque.extendleft("abcde")
                 deque.maxlen = 3
                 print(list(deque))
-                # ['c', 'd', 'e']
+                # ['c', 'b', 'a']
             ```
         """
         self._maxlen = value
