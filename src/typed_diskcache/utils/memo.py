@@ -7,7 +7,6 @@ import random
 import threading
 import time
 from collections.abc import Awaitable, Callable, Coroutine, Iterable
-from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Generic, Protocol, overload
 
@@ -17,7 +16,6 @@ from typing_extensions import ParamSpec, TypeVar, override
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
 from typed_diskcache.interface.cache import CacheProtocol
-from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
     from typed_diskcache.interface.cache import CacheProtocol
@@ -283,15 +281,14 @@ class AsyncMemoizedStampede(
         if not thread_added:
             return value
 
-        thread = threading.Thread(
-            target=async_thread_recompute,
-            args=(self._cache, key, self._func, self._expire, self._tags, *args),
-            kwargs=kwargs.copy(),
-        )
-        thread.daemon = True
-        thread.start()
-
-        return value
+        try:
+            return value
+        finally:
+            timer = AsyncTimer(self._func)
+            value = await timer(*args, **kwargs)
+            await self._cache.aset(
+                key, value, expire=self._expire, tags=self._tags, retry=True
+            )
 
 
 class MemoizedDecorator(Protocol):
@@ -585,38 +582,6 @@ def thread_recompute(
     timer = Timer(func)
     value = timer(*args, **kwargs)
     cache.set(key, value, expire=expire, tags=tags, retry=True)
-
-
-def async_thread_recompute(
-    cache: CacheProtocol,
-    key: Any,
-    func: Callable[_P, Awaitable[Any]],
-    expire: float | None,
-    tags: frozenset[str],
-    *args: _P.args,
-    **kwargs: _P.kwargs,
-) -> None:
-    validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
-
-    new_func = partial(
-        async_thread_recompute_process, cache, key, func, expire, tags, *args, **kwargs
-    )
-    anyio.run(new_func)
-
-
-async def async_thread_recompute_process(
-    cache: CacheProtocol,
-    key: Any,
-    func: Callable[_P, Awaitable[Any]],
-    expire: float | None,
-    tags: frozenset[str],
-    *args: _P.args,
-    **kwargs: _P.kwargs,
-) -> None:
-    timer = AsyncTimer(func)
-    value = await timer(*args, **kwargs)
-    await cache.aset(key, value, expire=expire, tags=tags, retry=True)
 
 
 def check_select(
