@@ -99,7 +99,7 @@ markers = [
 timeout = 3
 
 [tool.coverage.run]
-omit = ["./src/tests/**/*"]
+omit = ["./src/tests/**/*", "./src/typed_diskcache/database/revision/*"]
 
 [tool.coverage.report]
 exclude_lines = [
