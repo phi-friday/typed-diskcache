@@ -10,8 +10,6 @@ from typed_diskcache import exception as te
 from typed_diskcache.core.types import EvictionPolicy
 from typed_diskcache.utils.deque import Deque
 
-pytestmark = pytest.mark.anyio
-
 
 @pytest.fixture
 def deque(cache_directory):
