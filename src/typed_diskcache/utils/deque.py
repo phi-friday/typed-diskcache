@@ -388,9 +388,11 @@ class Deque(MutableSequence[_T], Generic[_T]):
         for key in self.cache.iterkeys():
             with suppress(KeyError):
                 item = self.cache[key]
-                if value == item:
+                if not item.default and value == item.value:
                     del self.cache[key]
                     return
+
+        raise te.TypedDiskcacheValueError("deque.remove(value): value not in deque")
 
     def rotate(self, steps: int = 1) -> None:
         """Rotate deque right by `steps`.
@@ -590,7 +592,7 @@ class Deque(MutableSequence[_T], Generic[_T]):
         for key in self.cache.iterkeys():
             with suppress(KeyError):
                 item = self.cache[key]
-                if value == item:
+                if not item.default and value == item.value:
                     return True
 
         return False
