@@ -4,6 +4,10 @@
     options:
         members:
             - __call__
+::: typed_diskcache.utils.memo.MemoizedStampedeDecorator
+    options:
+        members:
+            - __call__
 ::: typed_diskcache.utils.memo.AsyncMemoized
     options:
         members:
