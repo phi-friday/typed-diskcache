@@ -101,36 +101,6 @@ class Deque(MutableSequence[_T], Generic[_T]):
         """Maximum length of deque."""
         return self._maxlen
 
-    @maxlen.setter
-    @context
-    def maxlen(self, value: float) -> None:
-        """Set max length of the deque.
-
-        Pops items from left while length greater than max.
-
-        Args:
-            value: Max length.
-
-        Examples:
-            ```python
-            from typed_diskcache.utils.deque import Deque
-
-
-            def main() -> None:
-                deque = Deque()
-                deque.extendleft("abcde")
-                deque.maxlen = 3
-                print(list(deque))
-                # ['c', 'b', 'a']
-            ```
-        """
-        self._maxlen = value
-        with self.cache.conn.session() as session:
-            with transact(session):
-                with self._cache.conn.enter_session(session) as context:
-                    while len(self.cache) > self._maxlen:
-                        context.run(self.popleft)
-
     @context
     @override
     def append(self, value: _T) -> None:

@@ -35,14 +35,6 @@ def test_eviction_warning(cache_directory, eviction_policy):
         Deque(directory=cache_directory, eviction_policy=eviction_policy)
 
 
-def test_set_maxlen(deque):
-    assert deque.maxlen == float("inf")
-    deque.extendleft("abcde")
-    deque.maxlen = 3
-    assert deque.maxlen == 3
-    assert list(deque) == ["c", "b", "a"]
-
-
 def test_append(deque):
     deque.append("a")
     deque.append("b")
@@ -252,14 +244,15 @@ def test_imul(deque):
 # TODO: test_eq
 
 
-def test_repr(deque):
+def test_repr():
+    deque = Deque()
     assert repr(deque) == "Deque(maxlen=inf)"
-    deque.maxlen = 3
+    deque = Deque(maxlen=3)
     assert repr(deque) == "Deque(maxlen=3)"
 
 
-def test_pickle(deque):
-    deque.maxlen = 3
+def test_pickle(cache_directory):
+    deque = Deque(directory=cache_directory, maxlen=3)
     deque += "abc"
     dump = pickle.dumps(deque)
     new = pickle.loads(dump)  # noqa: S301
