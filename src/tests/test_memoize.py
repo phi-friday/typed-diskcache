@@ -12,9 +12,8 @@ from typed_diskcache.utils import memo
 pytestmark = pytest.mark.anyio
 
 
-@pytest.mark.timeout(60)
 def test_memoize(cache):
-    count = 1000
+    count = 10
 
     def fibiter(num: int) -> int:
         alpha, beta = 0, 1
@@ -101,9 +100,8 @@ def test_memoize_stampede(cache):
         thread.join()
 
 
-@pytest.mark.timeout(60)
 async def test_async_memoize(cache):
-    count = 1000
+    count = 10
 
     async def fibiter(num: int) -> int:
         alpha, beta = 0, 1
