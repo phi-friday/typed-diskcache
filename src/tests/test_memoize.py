@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import itertools
+import random
 import time
+from collections.abc import Callable
 from typing import Any
+from weakref import WeakSet
 
 import anyio
 import anyio.lowlevel
@@ -10,6 +14,22 @@ import pytest
 from typed_diskcache.utils import memo
 
 pytestmark = pytest.mark.anyio
+
+
+random_args = random.sample(
+    list(
+        itertools.combinations(
+            random.sample(
+                list(
+                    itertools.combinations(list(itertools.chain(range(5), "abcde")), 4)
+                ),
+                20,
+            ),
+            2,
+        )
+    ),
+    10,
+)
 
 
 def test_memoize(cache):
@@ -189,3 +209,131 @@ async def test_async_memoize_stampede(cache):
     assert state["num"] > 0
 
     worker.wait()
+
+
+########################################
+
+
+@pytest.mark.parametrize("memoize", [memo.memoize, memo.memoize_stampede])
+def test_memoize_attrs(cache, memoize: Callable[..., memo.MemoizedDecorator]):
+    def func() -> None: ...
+    async def async_func() -> None:
+        await anyio.lowlevel.checkpoint()
+
+    wrapped = memoize(cache)(func)
+    async_wrapped = memoize(cache)(async_func)
+
+    assert wrapped is not func
+    assert wrapped.__wrapped__ is func
+    assert async_wrapped is not async_func
+    assert async_wrapped.__wrapped__ is async_func
+
+    if memoize is not memo.memoize_stampede:
+        assert isinstance(wrapped, memo.Memoized)
+        assert isinstance(async_wrapped, memo.AsyncMemoized)
+        return
+
+    assert isinstance(wrapped, memo.MemoizedStampede)
+    assert isinstance(async_wrapped, memo.AsyncMemoizedStampede)
+    assert isinstance(wrapped.futures, WeakSet)
+    assert isinstance(async_wrapped.futures, WeakSet)
+
+
+@pytest.mark.parametrize("memoize", [memo.memoize, memo.memoize_stampede])
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.parametrize(("memo_include", "memo_exclude"), random_args)
+async def test_memoize_include_and_exclude_args(
+    cache,
+    memoize: Callable[..., memo.MemoizedDecorator],
+    is_async: bool,
+    memo_include: tuple[str | int, ...],
+    memo_exclude: tuple[str | int, ...],
+):
+    include, exclude = set(memo_include), set(memo_exclude)
+    cache.stats(enable=True)
+
+    if is_async:
+
+        @memoize(cache, include=include, exclude=exclude)
+        async def func(*args: int, **kwargs: int) -> Any:
+            await anyio.lowlevel.checkpoint()
+            return sum(args) + sum(kwargs.values())
+
+    else:
+
+        @memoize(cache, include=include, exclude=exclude)
+        def func(*args: int, **kwargs: int) -> Any:
+            return sum(args) + sum(kwargs.values())
+
+    args_all = list(range(5))
+    args_mask = set(range(5)).difference(include).difference(exclude)
+    kwargs_all = {key: num for num, key in enumerate("abcde")}
+    kwargs_mask = set("abcde").difference(include).difference(exclude)
+
+    value = func(*args_all, **kwargs_all)
+    if is_async:
+        value = await value
+
+    for key in exclude:
+        if isinstance(key, int):
+            args_all[key] += 1
+        else:
+            kwargs_all[key] += 1
+    for index in args_mask:
+        args_all[index] += 1
+    for key in kwargs_mask:
+        kwargs_all[key] += 1
+
+    hits1, misses1 = cache.stats()
+    alter = func(*args_all, **kwargs_all)
+    if is_async:
+        alter = await alter
+
+    assert value == alter
+
+    hits2, misses2 = cache.stats()
+
+    assert hits2 == (hits1 + 1)
+    assert misses2 == misses1
+
+    if memoize is memo.memoize_stampede:
+        func.wait()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.parametrize("memoize", [memo.memoize, memo.memoize_stampede])
+@pytest.mark.parametrize("is_async", [False, True])
+async def test_cache_key(
+    cache, memoize: Callable[..., memo.MemoizedDecorator], is_async: bool
+):
+    if is_async:
+
+        @memoize(cache)
+        async def func(*args: int, **kwargs: int) -> Any:
+            await anyio.lowlevel.checkpoint()
+            return sum(args) + sum(kwargs.values())
+
+    else:
+
+        @memoize(cache)
+        def func(*args: int, **kwargs: int) -> Any:
+            return sum(args) + sum(kwargs.values())
+
+    args = (1, 2, 3)
+    kwargs = {"a": 4, "b": 5}
+    value = func(*args, **kwargs)
+    if is_async:
+        value = await value
+
+    key = func.cache_key(*args, **kwargs)
+
+    assert key in cache
+    container = cache[key]
+    assert not container.default
+
+    container_value = container.value
+    if memoize is memo.memoize_stampede:
+        container_value = container_value[0]
+    assert container_value == value
+
+    if memoize is memo.memoize_stampede:
+        func.wait()  # pyright: ignore[reportAttributeAccessIssue]
