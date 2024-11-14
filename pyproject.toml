@@ -8,7 +8,7 @@ authors = [
     { name = "phi", email = "phi.friday@gmail.com" } 
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",

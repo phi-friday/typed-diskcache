@@ -41,10 +41,10 @@ I haven't tested it yet, so I can't guarantee it will work.
 I'll be adding more tests over time.
 
 ## TODO
-- [x] docstring
+- [X] docstring
 > Most of it is a copy of `python-diskcache`, but it's still pretty clean.
 - [X] docs
-- [ ] tests
+- [X] tests
 - [ ] performance
 
 ## License

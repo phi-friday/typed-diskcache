@@ -8,9 +8,9 @@ from typing import Annotated, Any, Generic, Literal, NamedTuple, final
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import LiteralString, TypedDict, TypeVar, override
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # pragma: no cover
     from enum import IntEnum, StrEnum
-else:
+else:  # pragma: no cover
     from enum import Enum, IntEnum
 
     class StrEnum(str, Enum):

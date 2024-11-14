@@ -1,4 +1,5 @@
 # pyright: reportMissingModuleSource=false
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import logging
@@ -10,9 +11,9 @@ from typing import Any
 
 from typed_diskcache.core.const import DEFAULT_LOG_LEVEL
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # pragma: no cover
     import tomllib as toml
-else:
+else:  # pragma: no cover
     import tomli as toml
 
 __all__ = ["get_logger"]
