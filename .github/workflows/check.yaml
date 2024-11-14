@@ -55,8 +55,8 @@ jobs:
         run: uv sync
 
       - name: Test with pytest
-        run: |
-          uv run pytest
+        timeout-minutes: 5
+        run: uv run pytest --no-cov --timeout=60
 
       - name: Minimize uv cache
         run: uv cache prune --ci

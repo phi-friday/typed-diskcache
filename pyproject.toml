@@ -91,7 +91,7 @@ packages = ["src/typed_diskcache"]
 include = ["src/typed_diskcache", "src/licenses"]
 
 [tool.pytest.ini_options]
-addopts = "-n 4 --cov=src/typed_diskcache --cov-report html --cov-report=xml -W error::UserWarning"
+addopts = "-n 4 -W error::UserWarning"
 testpaths = ["src/tests"]
 markers = [
     "only"
