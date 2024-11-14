@@ -7,6 +7,7 @@ import random
 import threading
 import time
 from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from concurrent.futures import Future, wait
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Generic, Protocol, overload
@@ -18,6 +19,7 @@ from typing_extensions import ParamSpec, TypeVar, override
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL
 from typed_diskcache.interface.cache import CacheProtocol
+from typed_diskcache.log import get_logger
 from typed_diskcache.utils.dependency import validate_installed
 
 if TYPE_CHECKING:
@@ -29,6 +31,7 @@ _T = TypeVar("_T", infer_variance=True)
 _P = ParamSpec("_P")
 
 _STAMPEDE_ADAPTER = TypeAdapter(tuple[Any, float])
+logger = get_logger()
 
 
 class Memoized(Generic[_P, _T]):
@@ -164,7 +167,7 @@ class AsyncTimer(Generic[_P, _T]):
 
 
 class MemoizedStampede(Memoized[_P, _T], Generic[_P, _T]):
-    __slots__ = (*Memoized.__slots__, "_beta", "_threads")
+    __slots__ = (*Memoized.__slots__, "_beta", "_futures")
 
     @override
     def __init__(
@@ -191,7 +194,7 @@ class MemoizedStampede(Memoized[_P, _T], Generic[_P, _T]):
             exclude=exclude,
         )
         self._beta = beta
-        self._threads: WeakSet[threading.Thread] = WeakSet()
+        self._futures: set[Future[Any]] = set()
 
     @override
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _T:
@@ -218,12 +221,11 @@ class MemoizedStampede(Memoized[_P, _T], Generic[_P, _T]):
         if not thread_added:
             return value
 
-        container = []
+        future: Future[Any] = Future()
         thread = threading.Thread(
             target=thread_recompute,
             args=(
-                self._threads,
-                container,
+                future,
                 self._cache,
                 key,
                 self._func,
@@ -234,15 +236,21 @@ class MemoizedStampede(Memoized[_P, _T], Generic[_P, _T]):
             kwargs=kwargs.copy(),
         )
         thread.daemon = True
-        container.append(thread)
-        self._threads.add(thread)
+        self._futures.add(future)
+        future.add_done_callback(self._futures.discard)
         thread.start()
 
         return value
 
     @property
-    def threads(self) -> set[threading.Thread]:
-        return set(self._threads)
+    def futures(self) -> WeakSet[Future[Any]]:
+        return WeakSet(self._futures)
+
+    def wait(self) -> None:
+        futures = list(self._futures)
+        if not futures:
+            return
+        wait(futures)
 
 
 class AsyncMemoizedStampede(
@@ -301,12 +309,11 @@ class AsyncMemoizedStampede(
         if not thread_added:
             return value
 
-        container = []
+        future: Future[Any] = Future()
         thread = threading.Thread(
             target=async_thread_recompute,
             args=(
-                self._threads,
-                container,
+                future,
                 self._cache,
                 key,
                 self._func,
@@ -317,8 +324,8 @@ class AsyncMemoizedStampede(
             kwargs=kwargs.copy(),
         )
         thread.daemon = True
-        container.append(thread)
-        self._threads.add(thread)
+        self._futures.add(future)
+        future.add_done_callback(self._futures.discard)
         thread.start()
 
         return value
@@ -604,8 +611,7 @@ def validate_stampede_value(value: Any) -> tuple[Any, float]:
 
 
 def thread_recompute(
-    threads: WeakSet[threading.Thread],
-    thread_container: list[threading.Thread],
+    future: Future[Any],
     cache: CacheProtocol,
     key: Any,
     func: Callable[_P, Any],
@@ -614,19 +620,21 @@ def thread_recompute(
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> None:
-    self = thread_container.pop()
-    timer = Timer(func)
-    value = timer(*args, **kwargs)
-    cache.set(key, value, expire=expire, tags=tags, retry=True)
-    threads.remove(self)
+    try:
+        timer = Timer(func)
+        value = timer(*args, **kwargs)
+        cache.set(key, value, expire=expire, tags=tags, retry=True)
+    except BaseException as exc:  # noqa: BLE001
+        future.set_exception(exc)
+    else:
+        future.set_result(None)
 
 
 def async_thread_recompute(
-    threads: WeakSet[threading.Thread],
-    thread_container: list[threading.Thread],
+    future: Future[Any],
     cache: CacheProtocol,
     key: Any,
-    func: Callable[_P, Awaitable[Any]],
+    func: Callable[_P, Any],
     expire: float | None,
     tags: frozenset[str],
     *args: _P.args,
@@ -635,27 +643,14 @@ def async_thread_recompute(
     validate_installed("anyio", "Consider installing extra `asyncio`.")
     import anyio
 
-    self = thread_container.pop()
-    new_func = partial(
-        async_thread_recompute_process, cache, key, func, expire, tags, *args, **kwargs
-    )
-    anyio.run(new_func)
-
-    threads.remove(self)
-
-
-async def async_thread_recompute_process(
-    cache: CacheProtocol,
-    key: Any,
-    func: Callable[_P, Awaitable[Any]],
-    expire: float | None,
-    tags: frozenset[str],
-    *args: _P.args,
-    **kwargs: _P.kwargs,
-) -> None:
-    timer = AsyncTimer(func)
-    value = await timer(*args, **kwargs)
-    await cache.aset(key, value, expire=expire, tags=tags, retry=True)
+    try:
+        timer = AsyncTimer(func)
+        value = anyio.run(partial(timer, *args, **kwargs))
+        cache.set(key, value, expire=expire, tags=tags, retry=True)
+    except BaseException as exc:  # noqa: BLE001
+        future.set_exception(exc)
+    else:
+        future.set_result(None)
 
 
 def check_select(

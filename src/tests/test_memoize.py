@@ -96,8 +96,7 @@ def test_memoize_stampede(cache):
         worker(100)
     assert state["num"] > 0
 
-    for thread in worker.threads:
-        thread.join()
+    worker.wait()
 
 
 async def test_async_memoize(cache):
@@ -189,5 +188,4 @@ async def test_async_memoize_stampede(cache):
         await worker(100)
     assert state["num"] > 0
 
-    for thread in worker.threads:
-        thread.join()
+    worker.wait()
