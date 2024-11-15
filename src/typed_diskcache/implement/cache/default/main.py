@@ -1057,6 +1057,11 @@ class Cache(CacheProtocol):
         *,
         method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
     ) -> Generator[Any, None, None]:
+        warnings.warn(
+            "This method is unstable and will be improved in the future",
+            te.TypedDiskcacheWarning,
+            stacklevel=2,
+        )
         max_id = default_utils.find_max_id(self.conn)
         if max_id is None:
             return
@@ -1094,6 +1099,11 @@ class Cache(CacheProtocol):
         *,
         method: FilterMethodLiteral | FilterMethod = FilterMethod.OR,
     ) -> AsyncGenerator[Any, None]:
+        warnings.warn(
+            "This method is unstable and will be improved in the future",
+            te.TypedDiskcacheWarning,
+            stacklevel=2,
+        )
         max_id = await default_utils.async_find_max_id(self.conn)
         if max_id is None:
             return

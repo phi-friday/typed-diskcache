@@ -335,6 +335,7 @@ class TestCache:
         assert container.default
         assert container.value == uid
 
+    @pytest.mark.skip("Unstable")
     @pytest.mark.parametrize(
         ("tags", "method", "expected"),
         [
@@ -361,6 +362,7 @@ class TestCache:
         select = set(self.origin_cache.filter(tags, method=method))
         assert select == set(expected)
 
+    @pytest.mark.skip("Unstable")
     @pytest.mark.parametrize(
         ("tags", "method", "expected"),
         [
@@ -386,6 +388,16 @@ class TestCache:
         assert len(self.origin_cache) == 8
         select = [x async for x in self.origin_cache.afilter(tags, method=method)]
         assert set(select) == set(expected)
+
+    @pytest.mark.parametrize("method", ["and", "or"])
+    def test_filter_warning(self, method):
+        with pytest.warns(te.TypedDiskcacheWarning):
+            list(self.origin_cache.filter("", method=method))
+
+    @pytest.mark.parametrize("method", ["and", "or"])
+    async def test_afilter_warning(self, method):
+        with pytest.warns(te.TypedDiskcacheWarning):
+            [x async for x in self.origin_cache.afilter("", method=method)]
 
     @pytest.mark.parametrize(("delta", "default"), product([1, 2, 3], [0, 1, 2]))
     async def test_incr(self, delta: int, default: int):

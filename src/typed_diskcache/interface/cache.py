@@ -421,6 +421,9 @@ class CacheProtocol(Protocol):
 
         Yields:
             Key of item matching tags.
+
+        Warning:
+            This method is unstable and will be improved in the future.
         """
 
     async def afilter(
@@ -437,6 +440,9 @@ class CacheProtocol(Protocol):
 
         Yields:
             Key of item matching tags.
+
+        Warning:
+            This method is unstable and will be improved in the future.
         """
         ...  # pragma: no cover
 
