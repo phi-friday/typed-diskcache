@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pickle
 import time
+from concurrent.futures import ThreadPoolExecutor, wait
+from functools import partial
 from itertools import product
 from pathlib import Path
 from typing import Literal
@@ -346,17 +348,21 @@ class TestCache:
     )
     def test_filter(self, tags, method, expected):
         assert len(self.origin_cache) == 0
-        for index, add_tags in enumerate([
-            [],
-            ["tag0"],
-            ["tag1"],
-            ["tag2"],
-            ["tag0", "tag1"],
-            ["tag0", "tag2"],
-            ["tag1", "tag2"],
-            ["tag0", "tag1", "tag2"],
-        ]):
-            self.origin_cache.set(index, index, tags=add_tags)
+        with ThreadPoolExecutor() as pool:
+            futures = [
+                pool.submit(self.origin_cache.set, index, index, tags=add_tags)
+                for index, add_tags in enumerate([
+                    [],
+                    ["tag0"],
+                    ["tag1"],
+                    ["tag2"],
+                    ["tag0", "tag1"],
+                    ["tag0", "tag2"],
+                    ["tag1", "tag2"],
+                    ["tag0", "tag1", "tag2"],
+                ])
+            ]
+            wait(futures)
 
         assert len(self.origin_cache) == 8
         select = set(self.origin_cache.filter(tags, method=method))
@@ -373,17 +379,22 @@ class TestCache:
     )
     async def test_afilter(self, tags, method, expected):
         assert len(self.origin_cache) == 0
-        for index, add_tags in enumerate([
-            [],
-            ["tag0"],
-            ["tag1"],
-            ["tag2"],
-            ["tag0", "tag1"],
-            ["tag0", "tag2"],
-            ["tag1", "tag2"],
-            ["tag0", "tag1", "tag2"],
-        ]):
-            await self.origin_cache.aset(index, index, tags=add_tags)
+        async with anyio.create_task_group() as task_group:
+            for index, add_tags in enumerate([
+                [],
+                ["tag0"],
+                ["tag1"],
+                ["tag2"],
+                ["tag0", "tag1"],
+                ["tag0", "tag2"],
+                ["tag1", "tag2"],
+                ["tag0", "tag1", "tag2"],
+            ]):
+                task_group.start_soon(
+                    partial(
+                        self.origin_cache.aset, index, index, tags=add_tags, retry=True
+                    )
+                )
 
         assert len(self.origin_cache) == 8
         select = [x async for x in self.origin_cache.afilter(tags, method=method)]
