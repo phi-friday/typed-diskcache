@@ -14,7 +14,7 @@ propagate = false
 handlers = ["console"]
 
 [config.formatters.standard]
-class = "typed_diskcache.log.formatter.Formatter"
+class = "typed_diskcache.log.log_format.Formatter"
 format = "%(asctime)s - [%(log_context)s-%(log_thread)d] - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
 datefmt = "%Y-%m-%dT%H:%M:%S.%s%z"
 default_time_format = "%Y-%m-%dT%H:%M:%S"

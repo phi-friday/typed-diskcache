@@ -10,10 +10,10 @@ from typed_diskcache.interface.sync import (
 )
 
 __all__ = [
+    "AsyncLockProtocol",
+    "AsyncSemaphoreProtocol",
     "CacheProtocol",
     "DiskProtocol",
     "SyncLockProtocol",
     "SyncSemaphoreProtocol",
-    "AsyncLockProtocol",
-    "AsyncSemaphoreProtocol",
 ]

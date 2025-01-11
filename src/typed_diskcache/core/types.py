@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: A005
 
 import sys
 from datetime import datetime, timedelta, timezone
@@ -20,22 +20,22 @@ else:  # pragma: no cover
 
 
 __all__ = [
-    "Constant",
-    "SettingsKey",
-    "EvictionPolicy",
     "CacheMode",
-    "MetadataKey",
-    "Stats",
+    "Constant",
+    "Container",
+    "EvictionPolicy",
+    "EvictionPolicyLiteral",
     "FilterMethod",
+    "FilterMethodLiteral",
+    "MetadataKey",
     "QueueSide",
+    "QueueSideLiteral",
     "SQLiteAutoVacuum",
     "SQLiteJournalMode",
     "SQLiteSynchronous",
+    "SettingsKey",
     "SettingsKwargs",
-    "Container",
-    "EvictionPolicyLiteral",
-    "FilterMethodLiteral",
-    "QueueSideLiteral",
+    "Stats",
 ]
 
 _T = TypeVar("_T", infer_variance=True)

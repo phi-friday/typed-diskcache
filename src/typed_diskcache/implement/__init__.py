@@ -12,13 +12,13 @@ from typed_diskcache.implement.sync import (
 )
 
 __all__ = [
-    "Cache",
-    "FanoutCache",
-    "Disk",
-    "SyncLock",
-    "SyncRLock",
     "AsyncLock",
     "AsyncRLock",
-    "SyncSemaphore",
     "AsyncSemaphore",
+    "Cache",
+    "Disk",
+    "FanoutCache",
+    "SyncLock",
+    "SyncRLock",
+    "SyncSemaphore",
 ]

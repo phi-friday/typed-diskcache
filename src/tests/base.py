@@ -46,7 +46,7 @@ def unwrap(func: Callable[..., Any]) -> Any:
 
 value_params = pytest.mark.parametrize(
     "value",
-    (
+    [
         pytest.param(None, id="none"),
         pytest.param((None,) * 2**20, id="tuple"),
         pytest.param(1234, id="int"),
@@ -56,5 +56,5 @@ value_params = pytest.mark.parametrize(
         pytest.param("hello" * 2**20, id="long_str"),
         pytest.param(b"world", id="bytes"),
         pytest.param(b"world" * 2**20, id="long_bytes"),
-    ),
+    ],
 )

@@ -69,7 +69,7 @@ class FanoutCache(CacheProtocol):
             [`Settings`][typed_diskcache.model.Settings].
     """
 
-    __slots__ = ("_shards", "_cache")
+    __slots__ = ("_cache", "_shards")
 
     def __init__(
         self,

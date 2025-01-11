@@ -10,10 +10,10 @@ if TYPE_CHECKING:
     from typed_diskcache.interface.cache import CacheProtocol
 
 __all__ = [
-    "SyncLockProtocol",
-    "SyncSemaphoreProtocol",
     "AsyncLockProtocol",
     "AsyncSemaphoreProtocol",
+    "SyncLockProtocol",
+    "SyncSemaphoreProtocol",
 ]
 
 

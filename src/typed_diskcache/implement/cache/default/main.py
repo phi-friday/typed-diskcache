@@ -79,7 +79,7 @@ class Cache(CacheProtocol):
             [`Settings`][typed_diskcache.model.Settings].
     """
 
-    __slots__ = ("_directory", "_disk", "_conn", "_settings", "_page_size")
+    __slots__ = ("_conn", "_directory", "_disk", "_page_size", "_settings")
 
     def __init__(
         self,

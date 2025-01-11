@@ -23,7 +23,7 @@ from typing_extensions import Self, TypeVar, override
 from typed_diskcache import exception as te
 from typed_diskcache.core.types import CacheMode, MetadataKey, SettingsKey
 from typed_diskcache.log import get_logger
-from typed_diskcache.utils.re import camel_to_snake
+from typed_diskcache.utils.rename import camel_to_snake
 
 if TYPE_CHECKING:
     from os import PathLike
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import InstrumentedAttribute
 
 
-__all__ = ["Version", "Metadata", "Settings", "Cache"]
+__all__ = ["Cache", "Metadata", "Settings", "Version"]
 
 _T = TypeVar("_T", infer_variance=True, default=Any)
 _T2 = TypeVar("_T2", infer_variance=True)

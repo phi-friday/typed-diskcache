@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.base import Transaction
 
 
-__all__ = ["auto", "upgrade", "downgrade"]
+__all__ = ["auto", "downgrade", "upgrade"]
 
 _REVISION = re.compile(r"(\d{3})_(.*)")
 logger = get_logger()

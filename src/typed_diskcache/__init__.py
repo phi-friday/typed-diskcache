@@ -14,16 +14,16 @@ from typed_diskcache.implement import (
 )
 
 __all__ = [
-    "Disk",
+    "AsyncLock",
+    "AsyncRLock",
+    "AsyncSemaphore",
     "Cache",
+    "Container",
+    "Disk",
     "FanoutCache",
     "SyncLock",
     "SyncRLock",
-    "AsyncLock",
-    "AsyncRLock",
     "SyncSemaphore",
-    "AsyncSemaphore",
-    "Container",
 ]
 
 __version__: str

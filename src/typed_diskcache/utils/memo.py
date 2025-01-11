@@ -36,14 +36,14 @@ logger = get_logger()
 
 class Memoized(Generic[_P, _T]):
     __slots__ = (
-        "_cache",
-        "_func",
         "_base",
-        "_typed",
-        "_expire",
-        "_tags",
-        "_include",
+        "_cache",
         "_exclude",
+        "_expire",
+        "_func",
+        "_include",
+        "_tags",
+        "_typed",
     )
 
     def __init__(

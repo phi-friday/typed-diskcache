@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from typed_diskcache.interface.cache import CacheProtocol
 
-__all__ = ["SyncSemaphore", "AsyncSemaphore"]
+__all__ = ["AsyncSemaphore", "SyncSemaphore"]
 
 logger = get_logger()
 _SEMAPHORE_VALUE_ADAPTER = TypeAdapter(int)
@@ -57,7 +57,7 @@ class SyncSemaphore(SyncSemaphoreProtocol):
         ```
     """
 
-    __slots__ = ("_cache", "_key", "_value", "_timeout", "_expire", "_tags")
+    __slots__ = ("_cache", "_expire", "_key", "_tags", "_timeout", "_value")
 
     def __init__(  # noqa: PLR0913
         self,
@@ -203,7 +203,7 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         ```
     """
 
-    __slots__ = ("_cache", "_key", "_value", "_expire", "_tags")
+    __slots__ = ("_cache", "_expire", "_key", "_tags", "_value")
 
     def __init__(  # noqa: PLR0913
         self,

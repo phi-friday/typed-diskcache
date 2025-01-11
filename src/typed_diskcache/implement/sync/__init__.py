@@ -9,10 +9,10 @@ from typed_diskcache.implement.sync.lock import (
 from typed_diskcache.implement.sync.semaphore import AsyncSemaphore, SyncSemaphore
 
 __all__ = [
-    "SyncLock",
-    "SyncRLock",
     "AsyncLock",
     "AsyncRLock",
-    "SyncSemaphore",
     "AsyncSemaphore",
+    "SyncLock",
+    "SyncRLock",
+    "SyncSemaphore",
 ]

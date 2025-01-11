@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import Session
 
-__all__ = ["log_context", "context", "enter_session"]
+__all__ = ["context", "enter_session", "log_context"]
 
 _F = TypeVar("_F", bound="Callable[..., Any]", infer_variance=True)
 _T = TypeVar("_T", bound="Session | AsyncSession", infer_variance=True)

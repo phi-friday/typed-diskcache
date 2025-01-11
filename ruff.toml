@@ -32,6 +32,8 @@ fixable = [
     "RUF020",  # never-union 
     "NPY201",  # numpy2-deprecation
     "PT",
+    "RUF022",  # unsorted-dunder-all
+    "RUF023",  # unsorted-dunder-slots
 ]
 ignore = [
     "TD",
@@ -39,8 +41,6 @@ ignore = [
     "E711",    # none-comparison # sqlalchemy
     "EM101",   # raw-string-in-exception
     "TRY003",  # raise-vanilla-args
-    "ANN101",  # missing-type-self
-    "ANN102",  # missing-type-cls
     "ANN401",  # dynamically-typed-expression
     "FBT002",  # boolean-default-value-in-function-definition
     "PGH003",  # blanket-type-ignore

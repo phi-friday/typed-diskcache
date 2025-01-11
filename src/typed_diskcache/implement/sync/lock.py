@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from typed_diskcache.interface.cache import CacheProtocol
 
-__all__ = ["SyncLock", "SyncRLock", "AsyncLock", "AsyncRLock"]
+__all__ = ["AsyncLock", "AsyncRLock", "SyncLock", "SyncRLock"]
 
 logger = get_logger()
 _LOCK_VALUE_ADAPTER = TypeAdapter(tuple[str, int])
@@ -57,7 +57,7 @@ class SyncLock(SyncLockProtocol):
         ```
     """
 
-    __slots__ = ("_cache", "_key", "_timeout", "_expire", "_tags")
+    __slots__ = ("_cache", "_expire", "_key", "_tags", "_timeout")
 
     def __init__(
         self,
@@ -274,7 +274,7 @@ class AsyncLock(AsyncLockProtocol):
         ```
     """
 
-    __slots__ = ("_cache", "_key", "_timeout", "_expire", "_tags")
+    __slots__ = ("_cache", "_expire", "_key", "_tags", "_timeout")
 
     def __init__(
         self,

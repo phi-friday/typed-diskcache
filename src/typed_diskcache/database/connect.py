@@ -38,10 +38,10 @@ if TYPE_CHECKING:
 
 __all__ = [
     "create_sqlite_url",
-    "ensure_sqlite_sync_engine",
     "ensure_sqlite_async_engine",
-    "transact",
+    "ensure_sqlite_sync_engine",
     "set_listeners",
+    "transact",
 ]
 
 AsyncConnT = TypeVar(
