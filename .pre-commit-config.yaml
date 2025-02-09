@@ -4,7 +4,7 @@ repos:
         args:
           - "-a ruff:ruff:v:"
           - "-a ruff:ruff-format:v:"
-        language_version: "3.9"
+          - "-g dev"
     repo: https://github.com/phi-friday/sync-uv-pre-commit
     rev: v0.6.3
 
@@ -15,7 +15,7 @@ repos:
         name: ruff-format
         args: [--check]
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
+    rev: v0.9.5
 
   - hooks:
       - id: pyright
@@ -25,4 +25,4 @@ repos:
         args:
           - "--pythonpath=.venv/bin/python"
     repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.389
+    rev: v1.1.393
