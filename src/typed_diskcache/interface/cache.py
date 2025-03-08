@@ -426,7 +426,7 @@ class CacheProtocol(Protocol):
             This method is unstable and will be improved in the future.
         """
 
-    async def afilter(
+    def afilter(
         self,
         tags: str | Iterable[str],
         *,
@@ -1283,7 +1283,7 @@ class CacheProtocol(Protocol):
             ```
         """
 
-    async def aiterkeys(self, *, reverse: bool = ...) -> AsyncGenerator[Any, None]:
+    def aiterkeys(self, *, reverse: bool = ...) -> AsyncGenerator[Any, None]:
         """Async iterate Cache keys in database sort order.
 
         Args:
