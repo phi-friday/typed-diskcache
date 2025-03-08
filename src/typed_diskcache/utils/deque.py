@@ -432,8 +432,8 @@ class Deque(MutableSequence[_T], Generic[_T]):
         temp = Deque(reversed(self), maxlen=self.maxlen)
         self.clear()
         self.extend(temp)
-        temp._cache.close()  # noqa: SLF001
-        temp_directory = temp._cache.directory  # noqa: SLF001
+        temp._cache.close()
+        temp_directory = temp._cache.directory
         del temp
         shutil.rmtree(temp_directory)
 
