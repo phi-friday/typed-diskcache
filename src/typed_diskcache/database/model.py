@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 import cloudpickle
 import sqlalchemy as sa
@@ -198,12 +198,12 @@ class Cache(Base):
     raw: Mapped[bool]
     store_time: Mapped[float]
     access_time: Mapped[float]
-    _filepath: Mapped[Optional[str]] = mapped_column(  # noqa: UP007
+    _filepath: Mapped[str | None] = mapped_column(
         "filepath", sa.String(), nullable=True
     )
-    value: Mapped[Optional[bytes]] = mapped_column(repr=False)  # noqa: UP007
+    value: Mapped[bytes | None] = mapped_column(repr=False)
 
-    expire_time: Mapped[Optional[float]] = mapped_column(  # noqa: UP007
+    expire_time: Mapped[float | None] = mapped_column(
         default=None, server_default=sa.literal(None, type_=sa.Float())
     )
     mode: Mapped[CacheMode] = mapped_column(

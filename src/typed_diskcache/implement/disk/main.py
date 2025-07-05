@@ -276,7 +276,7 @@ class Disk(DiskProtocol):
         self, *, mode: CacheMode, filename: str | PathLike[str] | None, value: Any
     ) -> Any:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         if mode == CacheMode.NONE:
             logger.debug("Fetching null value")
@@ -333,7 +333,7 @@ class Disk(DiskProtocol):
     @override
     async def aremove(self, file_path: str | PathLike[str]) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         full_path = anyio.Path(self.directory / file_path)
         full_dir = full_path.parent

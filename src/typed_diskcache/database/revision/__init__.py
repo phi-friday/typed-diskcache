@@ -204,7 +204,7 @@ def _downgrade_process(
 
 
 def _parse_revision(conn: Connection) -> Revision | None:
-    from typed_diskcache.database.model import Version
+    from typed_diskcache.database.model import Version  # noqa: PLC0415
 
     try:
         version = Version.get(conn)

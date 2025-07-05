@@ -641,7 +641,7 @@ def async_thread_recompute(
     **kwargs: _P.kwargs,
 ) -> None:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     try:
         timer = AsyncTimer(func)

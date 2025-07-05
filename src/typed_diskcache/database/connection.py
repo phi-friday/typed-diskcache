@@ -64,7 +64,7 @@ class Connection:
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from typed_diskcache.model import Settings
+        from typed_diskcache.model import Settings  # noqa: PLC0415
 
         self._database = Path(state["database"])
         self.timeout = state["timeout"]
@@ -164,7 +164,7 @@ class Connection:
     ) -> AsyncGenerator[AsyncSession, None]:
         """Connect to the database."""
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio.lowlevel
+        import anyio.lowlevel  # noqa: PLC0415
 
         session = self._acontext.get()
         if session is not None:

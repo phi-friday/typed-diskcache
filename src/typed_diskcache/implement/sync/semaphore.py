@@ -251,7 +251,7 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
     @override
     async def acquire(self) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         try:
             async with AsyncExitStack() as stack:

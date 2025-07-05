@@ -150,7 +150,7 @@ class FanoutCache(CacheProtocol):
 
     @override
     def __getstate__(self) -> Mapping[str, Any]:
-        import cloudpickle
+        import cloudpickle  # noqa: PLC0415
 
         return {
             "shards": cloudpickle.dumps(self._shards),
@@ -159,7 +159,7 @@ class FanoutCache(CacheProtocol):
 
     @override
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        import cloudpickle
+        import cloudpickle  # noqa: PLC0415
 
         cache: Shard = cloudpickle.loads(state["cache"])
         shards: tuple[Shard] = cloudpickle.loads(state["shards"])
@@ -322,7 +322,7 @@ class FanoutCache(CacheProtocol):
     @override
     async def astats(self, *, enable: bool = True, reset: bool = False) -> Stats:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         hits, misses = 0, 0
 
@@ -348,7 +348,7 @@ class FanoutCache(CacheProtocol):
     @override
     async def aclose(self) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         await self.conn.aclose()
         async with anyio.create_task_group() as task_group:
@@ -704,7 +704,7 @@ class FanoutCache(CacheProtocol):
         **kwargs: Unpack[SettingsKwargs],
     ) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         settings = cache_utils.combine_settings(settings, kwargs)
         async with anyio.create_task_group() as task_group:

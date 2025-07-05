@@ -70,6 +70,10 @@ class Deque(MutableSequence[_T], Generic[_T]):
 
     __slots__ = ("_cache", "_maxlen")
 
+    @override
+    def __hash__(self) -> int:
+        return hash(self.cache)
+
     def __init__(
         self,
         values: Iterable[_T] | None = None,

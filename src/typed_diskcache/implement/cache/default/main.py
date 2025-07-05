@@ -81,6 +81,10 @@ class Cache(CacheProtocol):
 
     __slots__ = ("_conn", "_directory", "_disk", "_page_size", "_settings")
 
+    @override
+    def __hash__(self) -> int:
+        return hash(self.directory)
+
     def __init__(
         self,
         directory: str | PathLike[str] | None = None,
@@ -170,7 +174,7 @@ class Cache(CacheProtocol):
 
     @override
     def __getstate__(self) -> Mapping[str, Any]:
-        import cloudpickle
+        import cloudpickle  # noqa: PLC0415
 
         return {
             "directory": str(self.directory),
@@ -182,9 +186,9 @@ class Cache(CacheProtocol):
 
     @override
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        import cloudpickle
+        import cloudpickle  # noqa: PLC0415
 
-        from typed_diskcache.model import Settings
+        from typed_diskcache.model import Settings  # noqa: PLC0415
 
         self._directory = Path(state["directory"])
         self._disk = cloudpickle.loads(state["disk"])

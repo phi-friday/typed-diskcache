@@ -91,7 +91,7 @@ async def async_write(
     encoding: str | None = None,
 ) -> int | None:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     full_path = anyio.Path(full_path)
     full_dir = full_path.parent

@@ -320,7 +320,7 @@ class AsyncLock(AsyncLockProtocol):
     @override
     async def acquire(self) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         try:
             with anyio.fail_after(self.timeout):
@@ -387,7 +387,7 @@ class AsyncRLock(AsyncLock):
     @override
     async def acquire(self) -> None:
         validate_installed("anyio", "Consider installing extra `asyncio`.")
-        import anyio
+        import anyio  # noqa: PLC0415
 
         pid = os.getpid()
         tid = threading.get_native_id()

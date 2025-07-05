@@ -31,7 +31,7 @@ __version__: str
 
 def __getattr__(name: str) -> object:
     if name == "__version__":  # pragma: no cover
-        from importlib.metadata import version
+        from importlib.metadata import version  # noqa: PLC0415
 
         _version = globals()["__version__"] = version("typed-diskcache")
         return _version

@@ -274,7 +274,7 @@ def extend_queue(
     stream: MemoryObjectSendStream[_T],
 ) -> Callable[[Iterable[_T]], Awaitable[Any]]:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     async def extend(items: Iterable[_T]) -> None:
         logger.debug("Stream stats: %r", stream.statistics())
@@ -461,7 +461,7 @@ async def async_transact(
     stacklevel: int = 3,
 ) -> AsyncGenerator[tuple[AsyncSession, AsyncCleanupFunc], None]:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     send, receive = anyio.create_memory_object_stream["str | PathLike[str] | None"](
         1_000_000
@@ -1060,7 +1060,7 @@ async def acheck_file_exists(  # noqa: PLR0913
     stacklevel: int = 3,
 ) -> None:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     full_path: anyio.Path = anyio.Path(directory) / row.filepath
     filenames.add(full_path)
@@ -1097,7 +1097,7 @@ async def acheck_unknown_file(
     stacklevel: int = 3,
 ) -> None:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     paths = {anyio.Path(dirpath) / file for file in files}
     error = paths - filenames
@@ -1124,7 +1124,7 @@ async def acheck_empty_dir(
     stacklevel: int = 3,
 ) -> None:
     validate_installed("anyio", "Consider installing extra `asyncio`.")
-    import anyio
+    import anyio  # noqa: PLC0415
 
     if not (dirs or files):
         message = f"Empty directory: {dirpath}"
