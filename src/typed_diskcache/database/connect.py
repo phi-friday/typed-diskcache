@@ -7,7 +7,7 @@ from contextlib import (
     contextmanager,
     suppress,
 )
-from typing import TYPE_CHECKING, Any, Callable, Protocol, overload, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, overload, runtime_checkable
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.sqlite import dialect as sqlite_dialect
@@ -29,7 +29,7 @@ from typed_diskcache.core.const import CONNECTION_BEGIN_INFO_KEY
 from typed_diskcache.log import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator, Callable, Generator
     from os import PathLike
 
     from sqlalchemy.engine.interfaces import DBAPIConnection, Dialect

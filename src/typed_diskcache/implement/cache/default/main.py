@@ -6,10 +6,10 @@ import warnings
 from contextlib import suppress
 from os.path import expandvars
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, TypeAlias, overload
 
 import sqlalchemy as sa
-from typing_extensions import TypeAlias, TypeVar, Unpack, override
+from typing_extensions import TypeVar, Unpack, override
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import ENOVAL

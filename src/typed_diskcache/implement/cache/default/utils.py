@@ -5,12 +5,12 @@ import time
 import warnings
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
-from typing_extensions import TypeAlias, TypeVar, Unpack
+from typing_extensions import TypeVar, Unpack
 
 from typed_diskcache import exception as te
 from typed_diskcache.core.const import (

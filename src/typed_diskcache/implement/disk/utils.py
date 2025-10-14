@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Literal, overload
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, overload
 
 from typed_diskcache.utils.dependency import validate_installed
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
-from typing_extensions import ParamSpec, TypeAlias, TypeVar
+from typing_extensions import ParamSpec, TypeVar
 
 from typed_diskcache import exception as te
 from typed_diskcache.log import get_logger
