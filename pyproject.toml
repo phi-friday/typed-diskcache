@@ -50,7 +50,7 @@ test = [
 dev = [
     { include-group = "test"},
     "ruff==0.14.0",
-    "ipykernel>=6.29.5",
+    "ipykernel>=7.0.0",
     "pre-commit>=4.3.0",
     "poethepoet>=0.37.0",
 ]
