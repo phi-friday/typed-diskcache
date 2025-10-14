@@ -580,13 +580,13 @@ class FanoutCache(CacheProtocol):
         return result
 
     @override
-    def iterkeys(self, *, reverse: bool = ...) -> Generator[Any, None, None]:
+    def iterkeys(self, *, reverse: bool = False) -> Generator[Any, None, None]:
         shards = reversed(self._shards) if reverse else self._shards
         for shard in shards:
             yield from shard.iterkeys(reverse=reverse)
 
     @override
-    async def aiterkeys(self, *, reverse: bool = ...) -> AsyncGenerator[Any, None]:
+    async def aiterkeys(self, *, reverse: bool = False) -> AsyncGenerator[Any, None]:
         shards = reversed(self._shards) if reverse else self._shards
         for shard in shards:
             async for key in shard.aiterkeys(reverse=reverse):
