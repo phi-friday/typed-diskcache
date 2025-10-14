@@ -146,7 +146,7 @@ class Settings(Base, Generic[_T]):
         self, *, key: str | SettingsKey, value: _T, modified_at: datetime | None = None
     ) -> None:
         super().__init__()
-        self.key = key
+        self.key = SettingsKey(key)
         self._value = value
         if modified_at is not None:
             self.modified_at = modified_at
@@ -262,7 +262,7 @@ class Cache(Base):
         self.raw = raw
         self.store_time = store_time
         self.access_time = access_time
-        self.filepath = filepath
+        self.filepath = str(filepath) if filepath else None
         self.value = value
         self.expire_time = expire_time
         self.mode = mode
