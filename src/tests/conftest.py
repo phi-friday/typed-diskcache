@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import shutil
-import sys
 import uuid
 from typing import Any
 
@@ -14,9 +13,7 @@ import typed_diskcache as td
     params=[
         pytest.param(("asyncio", {"use_uvloop": False}), id="asyncio"),
         pytest.param(("asyncio", {"use_uvloop": True}), id="asyncio-uvloop"),
-    ]
-    if sys.version_info < (3, 14)  # FIXME: uvloop not yet compatible with 3.14
-    else [pytest.param(("asyncio", {"use_uvloop": False}), id="asyncio")],
+    ],
     scope="session",
 )
 def anyio_backend(request: pytest.FixtureRequest) -> tuple[str, dict[str, Any]]:
