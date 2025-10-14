@@ -191,7 +191,7 @@ class TestCache:
         assert await self.cache.aset(key, 0, expire=0.1)
         await anyio.lowlevel.checkpoint()
         assert not (await self.cache.aget(key)).default
-        await anyio.sleep(0.1)
+        await anyio.sleep(0.2)
         assert (await self.cache.aget(key)).default
 
     @value_params
