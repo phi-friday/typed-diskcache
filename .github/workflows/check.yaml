@@ -30,6 +30,10 @@ jobs:
       - name: Set up uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Set special env for 3.14t
+        if: matrix.python-version == '3.14t'
+        run: echo "PYTHON_GIL=0" >> $GITHUB_ENV
+
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
         run: |
