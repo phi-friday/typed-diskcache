@@ -4,9 +4,7 @@ dynamic = ["version"]
 description = "Disk and file backed persistent cache."
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [
-    { name = "phi", email = "phi.friday@gmail.com" } 
-]
+authors = [{ name = "phi", email = "phi.friday@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
@@ -29,11 +27,7 @@ dependencies = [
     "tomli; python_version < '3.11'",
 ]
 [project.optional-dependencies]
-asyncio = [
-    "anyio>=4",
-    "aiosqlite",
-    "sqlalchemy[asyncio]>=2",
-]
+asyncio = ["anyio>=4", "aiosqlite", "sqlalchemy[asyncio]>=2"]
 
 [dependency-groups]
 test = [
@@ -45,7 +39,7 @@ test = [
     "typed-diskcache[asyncio]",
 ]
 dev = [
-    { include-group = "test"},
+    { include-group = "test" },
     "ruff==0.14.0",
     "ipykernel>=7.0.0",
     "pre-commit>=4.3.0",
@@ -91,12 +85,14 @@ include = ["src/typed_diskcache", "src/licenses"]
 [tool.pytest.ini_options]
 addopts = "-n 4 -W error::UserWarning"
 testpaths = ["src/tests"]
-markers = [
-    "only"
-]
+markers = ["only"]
 
 [tool.coverage.run]
-omit = ["./src/tests/**/*", "./src/typed_diskcache/database/revision/*"]
+omit = [
+    "./src/tests/**/*",
+    "./src/typed_diskcache/database/revision/*",
+    "./src/typed_diskcache/utils/deque.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [
