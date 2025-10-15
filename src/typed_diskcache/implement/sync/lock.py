@@ -264,6 +264,13 @@ class AsyncLock(AsyncLockProtocol):
         expire: Expiration time for lock.
         tags: Tags for lock.
 
+    Warns:
+        RuntimeWarning:
+            If the current Python interpreter is free-threading (without GIL),
+            using [`AsyncLock`][typed_diskcache.AsyncLock] may lead to
+            unexpected behavior. Consider using
+            [`SyncLock`][typed_diskcache.SyncLock] instead in such cases.
+
     Examples:
         ```python
         import typed_diskcache
@@ -380,6 +387,13 @@ class AsyncRLock(AsyncLock):
         timeout: Timeout for lock.
         expire: Expiration time for lock.
         tags: Tags for lock.
+
+    Warns:
+        RuntimeWarning:
+            If the current Python interpreter is free-threading (without GIL),
+            using [`AsyncRLock`][typed_diskcache.AsyncRLock] may lead to
+            unexpected behavior. Consider using
+            [`SyncRLock`][typed_diskcache.SyncRLock] instead in such cases.
 
     Examples:
         ```python

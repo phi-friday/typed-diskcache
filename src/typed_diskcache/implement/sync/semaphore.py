@@ -192,6 +192,13 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         expire: Expiration time for semaphore.
         tags: Tags for semaphore.
 
+    Warns:
+        RuntimeWarning:
+            If the current Python interpreter is free-threading (without GIL),
+            using [`AsyncSemaphore`][typed_diskcache.AsyncSemaphore] may lead to
+            unexpected behavior. Consider using
+            [`SyncSemaphore`][typed_diskcache.SyncSemaphore] instead in such cases.
+
     Examples:
         ```python
         import typed_diskcache
