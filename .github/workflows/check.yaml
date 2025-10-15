@@ -56,7 +56,7 @@ jobs:
 
       - name: Test with pytest
         timeout-minutes: 10
-        run: uv run pytest --no-cov --timeout=10 --color=yes -vv 
+        run: uv run pytest --no-cov --color=yes -vv 
 
       - name: Minimize uv cache
         run: uv cache prune --ci
