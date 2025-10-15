@@ -35,7 +35,6 @@ test = [
     "pytest-cov>=7.0.0",
     "pytest-env>=1.2.0",
     "pytest-xdist>=3.8.0",
-    "uvloop>=0.21.0",
     "typed-diskcache[asyncio]",
 ]
 dev = [
