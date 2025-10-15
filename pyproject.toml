@@ -58,6 +58,7 @@ docs = [
     "black>=25.9.0",
     "griffe-pydantic>=1.1.8",
     "griffe-inherited-docstrings>=1.1.2",
+    "griffe-warnings-deprecated>=1.1.0",
 ]
 
 [tool.uv]
