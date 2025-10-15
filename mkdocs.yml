@@ -93,6 +93,10 @@ plugins:
                   schema: true
               - griffe_inherited_docstrings:
                   merge: true
+              - griffe_warnings_deprecated:
+                  kind: danger
+                  title: Deprecated
+                  label: deprecated
             # general
             allow_inspection: true
             show_bases: true
