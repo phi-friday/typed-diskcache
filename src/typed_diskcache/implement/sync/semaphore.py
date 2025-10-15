@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import warnings
 from contextlib import AsyncExitStack, ExitStack
 from typing import TYPE_CHECKING, Any
 
@@ -8,7 +9,11 @@ from pydantic import TypeAdapter
 from typing_extensions import override
 
 from typed_diskcache import exception as te
-from typed_diskcache.core.const import DEFAULT_LOCK_TIMEOUT, SPIN_LOCK_SLEEP
+from typed_diskcache.core.const import (
+    DEFAULT_LOCK_TIMEOUT,
+    IS_FREE_THREAD,
+    SPIN_LOCK_SLEEP,
+)
 from typed_diskcache.core.context import context
 from typed_diskcache.database.connect import transact
 from typed_diskcache.interface.sync import AsyncSemaphoreProtocol, SyncSemaphoreProtocol
@@ -215,6 +220,14 @@ class AsyncSemaphore(AsyncSemaphoreProtocol):
         expire: float | None = None,
         tags: str | Iterable[str] | None = None,
     ) -> None:
+        if IS_FREE_THREAD:
+            message = (
+                "The current Python interpreter is free-threading (without GIL). "
+                "However, AsyncSemaphore does not support free-threading mode. "
+                "Consider using SyncLock instead."
+            )
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
+
         self._cache = cache
         self._key = key
         self._value = value

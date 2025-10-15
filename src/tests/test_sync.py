@@ -7,6 +7,7 @@ import anyio
 import pytest
 
 import typed_diskcache
+from typed_diskcache.core.const import IS_FREE_THREAD
 
 pytestmark = pytest.mark.anyio
 
@@ -74,6 +75,9 @@ def test_semaphore(cache):
     semaphore.release()
 
 
+@pytest.mark.skipif(
+    IS_FREE_THREAD, reason="AsyncLock does not support free-threading mode."
+)
 async def test_async_lock(cache):
     state = {"num": 0}
     lock = typed_diskcache.AsyncLock(cache, "demo")
@@ -94,6 +98,9 @@ async def test_async_lock(cache):
     assert state["num"] == 2
 
 
+@pytest.mark.skipif(
+    IS_FREE_THREAD, reason="AsyncRLock does not support free-threading mode."
+)
 async def test_async_rlock(cache):
     state = {"num": 0}
     rlock = typed_diskcache.AsyncRLock(cache, "demo")
@@ -114,6 +121,9 @@ async def test_async_rlock(cache):
     assert state["num"] == 2
 
 
+@pytest.mark.skipif(
+    IS_FREE_THREAD, reason="AsyncSemaphore does not support free-threading mode."
+)
 async def test_async_semaphore(cache):
     state = {"num": 0}
     semaphore = typed_diskcache.AsyncSemaphore(cache, "demo", value=3)
@@ -135,3 +145,17 @@ async def test_async_semaphore(cache):
     assert state["num"] == 2
     await semaphore.release()
     await semaphore.release()
+
+
+@pytest.mark.skipif(not IS_FREE_THREAD, reason="Only test in free-threading mode.")
+@pytest.mark.parametrize(
+    "lock_cls",
+    [
+        typed_diskcache.AsyncLock,
+        typed_diskcache.AsyncRLock,
+        typed_diskcache.AsyncSemaphore,
+    ],
+)
+def test_async_lock_warning(cache, lock_cls):
+    with pytest.warns(RuntimeWarning):
+        lock_cls(cache, "demo")
