@@ -46,5 +46,4 @@ DEFAULT_LOG_THREAD = (
 )
 DEFAULT_LOG_CONTEXT = getenv(DEFAULT_LOG_CONTEXT_KEY, "main")
 DEFAULT_LOG_LEVEL = getenv(DEFAULT_LOG_LEVEL_KEY, "info").upper()
-IS_FREE_THREAD = sys.version_info >= (3, 13) and not sys._is_gil_enabled()  # noqa: SLF001
-"""Whether the current Python interpreter is free-threading (without GIL)."""
+IS_FREE_THREAD = "free-threading" in sys.version and sys.version_info >= (3, 13)
