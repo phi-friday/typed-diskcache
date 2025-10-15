@@ -179,6 +179,12 @@ class SyncSemaphore(SyncSemaphoreProtocol):
 class AsyncSemaphore(AsyncSemaphoreProtocol):
     """Asynchronous semaphore implementation using spin-lock algorithm.
 
+    !!! warning
+        If the current Python interpreter is free-threading (without GIL),
+        using [`AsyncSemaphore`][typed_diskcache.AsyncSemaphore] may lead to unexpected
+        behavior. Consider using [`SyncSemaphore`][typed_diskcache.SyncSemaphore]
+        instead in such cases.
+
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 

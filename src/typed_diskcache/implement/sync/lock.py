@@ -252,6 +252,12 @@ class SyncRLock(SyncLock):
 class AsyncLock(AsyncLockProtocol):
     """Lock implementation using spin-lock algorithm.
 
+    !!! warning
+        If the current Python interpreter is free-threading (without GIL),
+        using [`AsyncLock`][typed_diskcache.AsyncLock] may lead to unexpected
+        behavior. Consider using [`SyncLock`][typed_diskcache.SyncLock]
+        instead in such cases.
+
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
 
@@ -375,6 +381,12 @@ class AsyncLock(AsyncLockProtocol):
 
 class AsyncRLock(AsyncLock):
     """Re-entrant lock implementation using spin-lock algorithm.
+
+    !!! warning
+        If the current Python interpreter is free-threading (without GIL),
+        using [`AsyncRLock`][typed_diskcache.AsyncRLock] may lead to unexpected
+        behavior. Consider using [`SyncRLock`][typed_diskcache.SyncRLock]
+        instead in such cases.
 
     Assumes the key will not be evicted. Set the eviction policy to 'none' on
     the cache to guarantee the key is not evicted.
