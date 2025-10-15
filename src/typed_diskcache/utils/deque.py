@@ -36,13 +36,6 @@ class Deque(MutableSequence[_T], Generic[_T]):
     Items are serialized to disk. Deque may be initialized from directory path
     where items are stored.
 
-    Args:
-        values: Values to initialize deque. Defaults to None.
-        maxlen: Maximum length of deque. Defaults to None (infinite).
-        directory: Directory path to store items. Defaults to None.
-        **kwargs: additional keyword arguments for
-            [`Settings`][typed_diskcache.model.Settings].
-
     Examples:
         ```python
         from typed_diskcache.utils.deque import Deque
@@ -83,6 +76,21 @@ class Deque(MutableSequence[_T], Generic[_T]):
         directory: str | PathLike[str] | None = None,
         **kwargs: Unpack[SettingsKwargs],
     ) -> None:
+        """Persistent sequence with double-ended queue semantics.
+
+        Double-ended queue is an ordered collection with optimized access at its
+        endpoints.
+
+        Items are serialized to disk. Deque may be initialized from directory path
+        where items are stored.
+
+        Args:
+            values: Values to initialize deque. Defaults to None.
+            maxlen: Maximum length of deque. Defaults to None (infinite).
+            directory: Directory path to store items. Defaults to None.
+            **kwargs: additional keyword arguments for
+                [`Settings`][typed_diskcache.model.Settings].
+        """
         eviction_policy = kwargs.pop("eviction_policy", EvictionPolicy.NONE)
         if eviction_policy != EvictionPolicy.NONE:
             warnings.warn(
