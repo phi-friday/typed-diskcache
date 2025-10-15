@@ -159,9 +159,6 @@ class Container(BaseModel, Generic[_T]):
     """DiskCache value container.
 
     Examples:
-        !!! note
-            Pattern matching is available in Python 3.10+.
-
         ```python
         from datetime import datetime, timezone
         from typing import Any
