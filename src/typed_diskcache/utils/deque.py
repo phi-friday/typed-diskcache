@@ -8,7 +8,7 @@ from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, Any, Generic, SupportsIndex
 
-from typing_extensions import Self, TypeVar, Unpack, override
+from typing_extensions import Self, TypeVar, Unpack, deprecated, override
 
 from typed_diskcache import Cache
 from typed_diskcache import exception as te
@@ -26,6 +26,7 @@ _T = TypeVar("_T", infer_variance=True)
 logger = get_logger()
 
 
+@deprecated("Deque is deprecated and not maintained.")
 class Deque(MutableSequence[_T], Generic[_T]):
     """Persistent sequence with double-ended queue semantics.
 
