@@ -3,7 +3,8 @@ name = "typed-diskcache"
 dynamic = ["version"]
 description = "Disk and file backed persistent cache."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "phi", email = "phi.friday@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
